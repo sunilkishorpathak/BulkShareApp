@@ -23,6 +23,13 @@ struct MainTabView: View {
                     Image(systemName: "magnifyingglass")
                     Text("Browse")
                 }
+            
+            // My Trips Tab
+            MyTripsView()
+                .tabItem {
+                    Image(systemName: "cart.fill")
+                    Text("My Trips")
+                }
         }
         .accentColor(.bulkSharePrimary)
         .navigationBarBackButtonHidden(true)

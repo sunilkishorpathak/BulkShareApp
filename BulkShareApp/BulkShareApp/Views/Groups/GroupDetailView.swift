@@ -2,14 +2,6 @@
 //  GroupDetailView.swift
 //  BulkShareApp
 //
-//  Created by Sunil Pathak on 9/27/25.
-//
-
-
-//
-//  GroupDetailView.swift
-//  BulkShareApp
-//
 //  Created on BulkShare Project
 //
 
@@ -19,6 +11,7 @@ struct GroupDetailView: View {
     let group: Group
     @State private var activeTrips: [Trip] = Trip.sampleTrips
     @State private var showingSettings = false
+    @State private var showingCreateTrip = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -31,7 +24,12 @@ struct GroupDetailView: View {
                 GroupMembersSection(group: group)
                 
                 // Active Trips Section
-                ActiveTripsSection(trips: activeTrips)
+                ActiveTripsSection(trips: activeTrips, group: group)
+                
+                // Quick Actions Section
+                QuickActionsSection(group: group, onCreateTrip: {
+                    showingCreateTrip = true
+                })
                 
                 Spacer(minLength: 100)
             }
@@ -51,6 +49,9 @@ struct GroupDetailView: View {
         }
         .sheet(isPresented: $showingSettings) {
             GroupSettingsView(group: group)
+        }
+        .sheet(isPresented: $showingCreateTrip) {
+            CreateTripView(group: group)
         }
     }
 }
@@ -74,10 +75,12 @@ struct GroupHeaderView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.bulkShareTextDark)
                 
-                Text(group.description)
-                    .font(.subheadline)
-                    .foregroundColor(.bulkShareTextMedium)
-                    .multilineTextAlignment(.center)
+                if !group.description.isEmpty {
+                    Text(group.description)
+                        .font(.subheadline)
+                        .foregroundColor(.bulkShareTextMedium)
+                        .multilineTextAlignment(.center)
+                }
                 
                 HStack(spacing: 20) {
                     Label("\(group.memberCount) members", systemImage: "person.3.fill")
@@ -85,6 +88,13 @@ struct GroupHeaderView: View {
                 }
                 .font(.caption)
                 .foregroundColor(.bulkShareTextLight)
+            }
+            
+            // Group Stats
+            HStack(spacing: 16) {
+                GroupStatCard(title: "Active Trips", value: "2", icon: "cart.fill", color: .bulkSharePrimary)
+                GroupStatCard(title: "This Month", value: "$284", icon: "dollarsign.circle.fill", color: .bulkShareSuccess)
+                GroupStatCard(title: "Total Saved", value: "$1.2K", icon: "chart.line.uptrend.xyaxis", color: .bulkShareInfo)
             }
         }
         .padding()
@@ -94,8 +104,38 @@ struct GroupHeaderView: View {
     }
 }
 
+struct GroupStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(color)
+            
+            Text(value)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.bulkShareTextDark)
+            
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.bulkShareTextMedium)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(color.opacity(0.1))
+        .cornerRadius(10)
+    }
+}
+
 struct GroupMembersSection: View {
     let group: Group
+    @State private var showingAllMembers = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -107,14 +147,16 @@ struct GroupMembersSection: View {
                 
                 Spacer()
                 
-                Button("View All") {
-                    // Navigate to all members
+                if group.memberCount > 3 {
+                    Button("View All") {
+                        showingAllMembers = true
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.bulkSharePrimary)
                 }
-                .font(.subheadline)
-                .foregroundColor(.bulkSharePrimary)
             }
             
-            // Sample Members
+            // Member List
             VStack(spacing: 12) {
                 ForEach(User.sampleUsers.prefix(3), id: \.id) { user in
                     HStack {
@@ -123,9 +165,9 @@ struct GroupMembersSection: View {
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
+                            .frame(width: 44, height: 44)
                             .background(Color.bulkSharePrimary)
-                            .cornerRadius(20)
+                            .cornerRadius(22)
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text(user.name)
@@ -140,22 +182,65 @@ struct GroupMembersSection: View {
                         
                         Spacer()
                         
-                        if user.id == group.adminId {
-                            Badge(text: "Admin", color: .bulkShareInfo)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            if user.id == group.adminId {
+                                Badge(text: "Admin", color: .bulkShareInfo)
+                            }
+                            
+                            // Online status indicator
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color.bulkShareSuccess)
+                                    .frame(width: 8, height: 8)
+                                Text("Active")
+                                    .font(.caption2)
+                                    .foregroundColor(.bulkShareSuccess)
+                            }
                         }
                     }
+                    .padding(.vertical, 4)
                 }
+            }
+            
+            // Add Member Button
+            Button(action: {
+                // Add member functionality
+            }) {
+                HStack {
+                    Image(systemName: "person.badge.plus")
+                        .foregroundColor(.bulkSharePrimary)
+                    
+                    Text("Invite Members")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.bulkSharePrimary)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextLight)
+                }
+                .padding()
+                .background(Color.bulkSharePrimary.opacity(0.1))
+                .cornerRadius(12)
             }
         }
         .padding()
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+        .sheet(isPresented: $showingAllMembers) {
+            AllMembersView(group: group)
+        }
     }
 }
 
 struct ActiveTripsSection: View {
     let trips: [Trip]
+    let group: Group
+    @State private var showingCreateTrip = false
+    @State private var showingAllTrips = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -168,7 +253,7 @@ struct ActiveTripsSection: View {
                 Spacer()
                 
                 Button("Create Trip") {
-                    // Navigate to create trip
+                    showingCreateTrip = true
                 }
                 .font(.subheadline)
                 .foregroundColor(.white)
@@ -179,22 +264,198 @@ struct ActiveTripsSection: View {
             }
             
             if trips.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "cart")
-                        .font(.title)
-                        .foregroundColor(.bulkShareTextLight)
-                    
-                    Text("No active trips")
-                        .font(.subheadline)
-                        .foregroundColor(.bulkShareTextMedium)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
+                EmptyTripsCard()
             } else {
                 VStack(spacing: 12) {
                     ForEach(trips.prefix(3)) { trip in
-                        TripCard(trip: trip)
+                        NavigationLink(destination: TripDetailView(trip: trip)) {
+                            EnhancedTripCard(trip: trip)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
+                    
+                    if trips.count > 3 {
+                        Button("View All Trips (\(trips.count))") {
+                            showingAllTrips = true
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.bulkSharePrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.bulkSharePrimary.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+        .sheet(isPresented: $showingCreateTrip) {
+            CreateTripView(group: group)
+        }
+        .sheet(isPresented: $showingAllTrips) {
+            AllTripsView(groupId: group.id)
+        }
+    }
+}
+
+struct EmptyTripsCard: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "cart.badge.plus")
+                .font(.system(size: 40))
+                .foregroundColor(.bulkShareTextLight)
+            
+            VStack(spacing: 8) {
+                Text("No Active Trips")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.bulkShareTextDark)
+                
+                Text("Create a trip to start bulk sharing with your group")
+                    .font(.caption)
+                    .foregroundColor(.bulkShareTextMedium)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(30)
+        .background(Color.bulkShareBackground)
+        .cornerRadius(12)
+    }
+}
+
+struct EnhancedTripCard: View {
+    let trip: Trip
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Header
+            HStack {
+                HStack(spacing: 8) {
+                    Text(trip.store.icon)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(trip.store.displayName)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.bulkShareTextDark)
+                        
+                        Text(trip.scheduledDate, style: .relative)
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextMedium)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("$\(trip.totalEstimatedCost, specifier: "%.2f")")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.bulkSharePrimary)
+                    
+                    Badge(text: trip.status.displayName, color: Color(hex: trip.status.color))
+                }
+            }
+            
+            // Items Preview
+            HStack {
+                ForEach(trip.items.prefix(3), id: \.id) { item in
+                    Text(item.category.icon)
+                        .font(.caption)
+                        .frame(width: 24, height: 24)
+                        .background(Color.bulkSharePrimary.opacity(0.1))
+                        .cornerRadius(6)
+                }
+                
+                if trip.items.count > 3 {
+                    Text("+\(trip.items.count - 3)")
+                        .font(.caption2)
+                        .foregroundColor(.bulkShareTextMedium)
+                        .frame(width: 24, height: 24)
+                        .background(Color.bulkShareBackground)
+                        .cornerRadius(6)
+                }
+                
+                Spacer()
+                
+                Text("\(trip.items.count) items")
+                    .font(.caption)
+                    .foregroundColor(.bulkShareTextMedium)
+            }
+            
+            // Footer
+            HStack {
+                Label("\(trip.participantCount) joined", systemImage: "person.3.fill")
+                    .font(.caption)
+                    .foregroundColor(.bulkShareInfo)
+                
+                Spacer()
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                    Text(trip.scheduledDate, style: .time)
+                        .font(.caption)
+                }
+                .foregroundColor(.bulkShareTextLight)
+            }
+        }
+        .padding()
+        .background(Color.bulkShareBackground)
+        .cornerRadius(12)
+    }
+}
+
+struct QuickActionsSection: View {
+    let group: Group
+    let onCreateTrip: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Quick Actions")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.bulkShareTextDark)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+                QuickActionCard(
+                    icon: "cart.badge.plus",
+                    title: "Create Trip",
+                    subtitle: "Plan a new shopping trip",
+                    color: .bulkSharePrimary,
+                    action: onCreateTrip
+                )
+                
+                QuickActionCard(
+                    icon: "person.badge.plus",
+                    title: "Invite Members",
+                    subtitle: "Add family & friends",
+                    color: .bulkShareInfo
+                ) {
+                    // Invite members
+                }
+                
+                QuickActionCard(
+                    icon: "chart.bar.fill",
+                    title: "View Analytics",
+                    subtitle: "See group savings",
+                    color: .bulkShareSuccess
+                ) {
+                    // View analytics
+                }
+                
+                QuickActionCard(
+                    icon: "gear",
+                    title: "Group Settings",
+                    subtitle: "Manage preferences",
+                    color: .bulkShareWarning
+                ) {
+                    // Group settings
                 }
             }
         }
@@ -205,38 +466,90 @@ struct ActiveTripsSection: View {
     }
 }
 
-struct TripCard: View {
-    let trip: Trip
+struct QuickActionCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let color: Color
+    let action: () -> Void
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(trip.store.icon) \(trip.store.displayName)")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.bulkShareTextDark)
+        Button(action: action) {
+            VStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(color)
+                    .frame(width: 40, height: 40)
+                    .background(color.opacity(0.1))
+                    .cornerRadius(12)
                 
-                Text(trip.scheduledDate, style: .relative)
-                    .font(.caption)
+                VStack(spacing: 4) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.bulkShareTextDark)
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextMedium)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.bulkShareBackground)
+            .cornerRadius(12)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// Placeholder views for navigation
+struct AllMembersView: View {
+    let group: Group
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("All Members")
+                    .font(.title)
+                
+                Text("Coming Soon!")
                     .foregroundColor(.bulkShareTextMedium)
             }
-            
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("\(trip.items.count) items")
-                    .font(.caption)
-                    .foregroundColor(.bulkShareTextMedium)
-                
-                Text("$\(trip.totalEstimatedCost, specifier: "%.2f")")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.bulkSharePrimary)
+            .navigationTitle(group.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
             }
         }
-        .padding()
-        .background(Color.bulkShareBackground)
-        .cornerRadius(12)
+    }
+}
+
+struct AllTripsView: View {
+    let groupId: String
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("All Group Trips")
+                    .font(.title)
+                
+                Text("Coming Soon!")
+                    .foregroundColor(.bulkShareTextMedium)
+            }
+            .navigationTitle("Group Trips")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
     }
 }
 
@@ -247,23 +560,80 @@ struct GroupSettingsView: View {
     
     var body: some View {
         NavigationView {
-            VStack {
-                Text("Group Settings")
-                    .font(.title)
-                
-                Text("Coming Soon!")
-                    .foregroundColor(.bulkShareTextMedium)
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Group Settings Content
+                    VStack(spacing: 16) {
+                        Text("Group Settings")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        VStack(spacing: 12) {
+                            SettingsRow(icon: "pencil", title: "Edit Group Info", action: {})
+                            SettingsRow(icon: "person.badge.plus", title: "Manage Members", action: {})
+                            SettingsRow(icon: "bell", title: "Notifications", action: {})
+                            SettingsRow(icon: "chart.bar", title: "Group Analytics", action: {})
+                            SettingsRow(icon: "shield", title: "Privacy Settings", action: {})
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        
+                        // Danger Zone
+                        VStack(spacing: 12) {
+                            Text("Danger Zone")
+                                .font(.headline)
+                                .foregroundColor(.red)
+                            
+                            SettingsRow(icon: "trash", title: "Leave Group", textColor: .red, action: {})
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(12)
+                    }
+                }
+                .padding()
             }
+            .background(Color.bulkShareBackground.ignoresSafeArea())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
+                        .foregroundColor(.bulkSharePrimary)
                 }
             }
         }
+    }
+}
+
+struct SettingsRow: View {
+    let icon: String
+    let title: String
+    var textColor: Color = .bulkShareTextDark
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(textColor)
+                    .frame(width: 24)
+                
+                Text(title)
+                    .foregroundColor(textColor)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.bulkShareTextLight)
+            }
+            .padding()
+            .background(Color.bulkShareBackground)
+            .cornerRadius(8)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
