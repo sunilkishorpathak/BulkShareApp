@@ -224,7 +224,6 @@ struct SignUpView: View {
     }
     
     private func handleSignUp() {
-        // Validation
         guard isFormValid else {
             showAlert(title: "Invalid Form", message: "Please fill all fields correctly")
             return
@@ -232,15 +231,27 @@ struct SignUpView: View {
         
         isLoading = true
         
-        // Simulate API call for account creation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            isLoading = false
-            
-            // Simulate successful account creation
-            showAlert(
-                title: "Account Created!",
-                message: "Please check your email to verify your account before logging in."
+        Task {
+            let result = await FirebaseManager.shared.signUp(
+                email: email,
+                password: password,
+                fullName: fullName,
+                paypalId: paypalId
             )
+            
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                switch result {
+                case .success:
+                    self.showAlert(
+                        title: "Account Created!",
+                        message: "Please check your email to verify your account before logging in."
+                    )
+                case .failure(let error):
+                    self.showAlert(title: "Signup Failed", message: error.localizedDescription)
+                }
+            }
         }
     }
     

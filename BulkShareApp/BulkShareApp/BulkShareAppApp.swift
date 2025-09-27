@@ -2,16 +2,39 @@
 //  BulkShareAppApp.swift
 //  BulkShareApp
 //
-//  Created by Sunil Pathak on 9/27/25.
+//  Created on BulkShare Project
 //
 
 import SwiftUI
+import Firebase
 
 @main
 struct BulkShareAppApp: App {
+    @StateObject private var firebaseManager = FirebaseManager.shared
+    
+    init() {
+        // Configure Firebase when the app launches
+        FirebaseApp.configure()
+    }
+    
     var body: some Scene {
         WindowGroup {
+            RootView()
+                .environmentObject(firebaseManager)
+        }
+    }
+}
+
+struct RootView: View {
+    @EnvironmentObject var firebaseManager: FirebaseManager
+    
+    var body: some View {
+        if firebaseManager.isAuthenticated {
+            MainTabView()
+                .environmentObject(firebaseManager)
+        } else {
             ContentView()
+                .environmentObject(firebaseManager)
         }
     }
 }

@@ -186,15 +186,19 @@ struct LoginView: View {
         
         isLoading = true
         
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isLoading = false
+        Task {
+            let result = await FirebaseManager.shared.signIn(email: email, password: password)
             
-            // For demo purposes, accept any valid email/password combination
-            if email.contains("@") && password.count >= 6 {
-                navigateToMainApp = true
-            } else {
-                showAlert(message: "Invalid email or password")
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                switch result {
+                case .success:
+                    // Navigation handled automatically by RootView
+                    break
+                case .failure(let error):
+                    self.showAlert(message: error.localizedDescription)
+                }
             }
         }
     }

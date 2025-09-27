@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B185BB0BB2518F8B5864F8F9 /* Pods_BulkShareApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C2BE1FBD1D863F8E41993D3 /* Pods_BulkShareApp.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		B90C80082E87D3F300F3251D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +28,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		6C2BE1FBD1D863F8E41993D3 /* Pods_BulkShareApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BulkShareApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		80865CDC9F6654328853FA13 /* Pods-BulkShareApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkShareApp.debug.xcconfig"; path = "Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp.debug.xcconfig"; sourceTree = "<group>"; };
+		A8D0F20D35C55CF58E5885DA /* Pods-BulkShareApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkShareApp.release.xcconfig"; path = "Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp.release.xcconfig"; sourceTree = "<group>"; };
 		B90C7FFA2E87D3F000F3251D /* BulkShareApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BulkShareApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B90C80072E87D3F300F3251D /* BulkShareAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkShareAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B90C80112E87D3F300F3251D /* BulkShareAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkShareAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -52,6 +59,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B185BB0BB2518F8B5864F8F9 /* Pods_BulkShareApp.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,6 +80,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6EB991F3C1D0EC5CB0044815 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				80865CDC9F6654328853FA13 /* Pods-BulkShareApp.debug.xcconfig */,
+				A8D0F20D35C55CF58E5885DA /* Pods-BulkShareApp.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		B90C7FF12E87D3EF00F3251D = {
 			isa = PBXGroup;
 			children = (
@@ -79,6 +96,8 @@
 				B90C800A2E87D3F300F3251D /* BulkShareAppTests */,
 				B90C80142E87D3F300F3251D /* BulkShareAppUITests */,
 				B90C7FFB2E87D3F000F3251D /* Products */,
+				6EB991F3C1D0EC5CB0044815 /* Pods */,
+				E78149EEEAD2BAA7C7476FB3 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -92,6 +111,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		E78149EEEAD2BAA7C7476FB3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				6C2BE1FBD1D863F8E41993D3 /* Pods_BulkShareApp.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -99,9 +126,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = B90C801B2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkShareApp" */;
 			buildPhases = (
+				42256226A1F066D88874A582 /* [CP] Check Pods Manifest.lock */,
 				B90C7FF62E87D3EF00F3251D /* Sources */,
 				B90C7FF72E87D3EF00F3251D /* Frameworks */,
 				B90C7FF82E87D3EF00F3251D /* Resources */,
+				83061302473B23B5B7F34743 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -111,8 +140,6 @@
 				B90C7FFC2E87D3F000F3251D /* BulkShareApp */,
 			);
 			name = BulkShareApp;
-			packageProductDependencies = (
-			);
 			productName = BulkShareApp;
 			productReference = B90C7FFA2E87D3F000F3251D /* BulkShareApp.app */;
 			productType = "com.apple.product-type.application";
@@ -134,8 +161,6 @@
 				B90C800A2E87D3F300F3251D /* BulkShareAppTests */,
 			);
 			name = BulkShareAppTests;
-			packageProductDependencies = (
-			);
 			productName = BulkShareAppTests;
 			productReference = B90C80072E87D3F300F3251D /* BulkShareAppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -157,8 +182,6 @@
 				B90C80142E87D3F300F3251D /* BulkShareAppUITests */,
 			);
 			name = BulkShareAppUITests;
-			packageProductDependencies = (
-			);
 			productName = BulkShareAppUITests;
 			productReference = B90C80112E87D3F300F3251D /* BulkShareAppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -230,6 +253,52 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		42256226A1F066D88874A582 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-BulkShareApp-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		83061302473B23B5B7F34743 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		B90C7FF62E87D3EF00F3251D /* Sources */ = {
@@ -390,12 +459,14 @@
 		};
 		B90C801C2E87D3F300F3251D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 80865CDC9F6654328853FA13 /* Pods-BulkShareApp.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -417,12 +488,14 @@
 		};
 		B90C801D2E87D3F300F3251D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A8D0F20D35C55CF58E5885DA /* Pods-BulkShareApp.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -448,6 +521,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
@@ -466,6 +540,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
@@ -483,6 +558,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bulkshare.app.BulkShareAppUITests;
@@ -499,6 +575,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bulkshare.app.BulkShareAppUITests;

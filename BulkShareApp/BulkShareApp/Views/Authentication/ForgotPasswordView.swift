@@ -163,13 +163,22 @@ struct ForgotPasswordView: View {
         
         isLoading = true
         
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isLoading = false
-            showAlert(
-                title: "Reset Link Sent",
-                message: "If an account with this email exists, you'll receive a password reset link shortly."
-            )
+        Task {
+            let result = await FirebaseManager.shared.sendPasswordReset(email: email)
+            
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                switch result {
+                case .success:
+                    self.showAlert(
+                        title: "Reset Link Sent",
+                        message: "If an account with this email exists, you'll receive a password reset link shortly."
+                    )
+                case .failure(let error):
+                    self.showAlert(title: "Error", message: error.localizedDescription)
+                }
+            }
         }
     }
     

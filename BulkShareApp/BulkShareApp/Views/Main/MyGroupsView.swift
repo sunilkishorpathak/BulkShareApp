@@ -2,103 +2,76 @@
 //  MyGroupsView.swift
 //  BulkShareApp
 //
-//  Created by Sunil Pathak on 9/27/25.
-//
-
-
-//
-//  MyGroupsView.swift
-//  BulkShareApp
-//
 //  Created on BulkShare Project
 //
 
 import SwiftUI
 
 struct MyGroupsView: View {
-    @State private var userGroups: [Group] = Group.sampleGroups
+    @EnvironmentObject var firebaseManager: FirebaseManager
+    @State private var userGroups: [Group] = []
+    @State private var isLoading = true
     @State private var showingCreateGroup = false
+    @State private var showingError = false
+    @State private var errorMessage = ""
     
     var body: some View {
         NavigationView {
             ZStack {
                 Color.bulkShareBackground.ignoresSafeArea()
                 
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        // Header Stats
-                        HStack(spacing: 20) {
-                            StatCard(
-                                title: "Groups",
-                                value: "\(userGroups.count)",
-                                icon: "person.3.fill",
-                                color: .bulkSharePrimary
-                            )
+                if isLoading {
+                    LoadingView()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            // Header Stats
+                            StatsHeaderView(userGroups: userGroups)
                             
-                            StatCard(
-                                title: "Active",
-                                value: "\(userGroups.filter { $0.isActive }.count)",
-                                icon: "clock.fill",
-                                color: .bulkShareSuccess
-                            )
+                            // Groups List
+                            if userGroups.isEmpty {
+                                EmptyGroupsView()
+                            } else {
+                                ForEach(userGroups) { group in
+                                    NavigationLink(destination: GroupDetailView(group: group)) {
+                                        GroupCard(group: group)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
                             
-                            StatCard(
-                                title: "Members",
-                                value: "\(userGroups.reduce(0) { $0 + $1.memberCount })",
-                                icon: "person.2.fill",
-                                color: .bulkShareInfo
-                            )
+                            Spacer(minLength: 100) // Space for floating button
                         }
                         .padding(.horizontal)
-                        .padding(.top, 10)
-                        
-                        // Groups List
-                        if userGroups.isEmpty {
-                            EmptyGroupsView()
-                        } else {
-                            ForEach(userGroups) { group in
-                                NavigationLink(destination: GroupDetailView(group: group)) {
-                                    GroupCard(group: group)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
-                        
-                        Spacer(minLength: 100) // Space for floating button
                     }
-                    .padding(.horizontal)
+                    .refreshable {
+                        await loadUserGroups()
+                    }
                 }
                 
                 // Floating Create Button
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            showingCreateGroup = true
-                        }) {
-                            Image(systemName: "plus")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .frame(width: 56, height: 56)
-                                .background(Color.bulkSharePrimary)
-                                .clipShape(Circle())
-                                .shadow(color: Color.bulkSharePrimary.opacity(0.3), radius: 8, x: 0, y: 4)
-                        }
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 20)
-                    }
+                FloatingCreateButton {
+                    showingCreateGroup = true
                 }
             }
             .navigationTitle("My Groups")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        // Refresh groups
-                    }) {
-                        Image(systemName: "arrow.clockwise")
+                    Menu {
+                        Button(action: {
+                            Task { await loadUserGroups() }
+                        }) {
+                            Label("Refresh", systemImage: "arrow.clockwise")
+                        }
+                        
+                        Button(action: {
+                            handleSignOut()
+                        }) {
+                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                             .foregroundColor(.bulkSharePrimary)
                     }
                 }
@@ -106,11 +79,101 @@ struct MyGroupsView: View {
             .sheet(isPresented: $showingCreateGroup) {
                 CreateGroupView()
             }
+            .alert("Error", isPresented: $showingError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
+            .onAppear {
+                if userGroups.isEmpty {
+                    Task { await loadUserGroups() }
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func loadUserGroups() async {
+        isLoading = true
+        
+        do {
+            let groups = try await firebaseManager.getUserGroups()
+            self.userGroups = groups
+            self.isLoading = false
+        } catch {
+            self.isLoading = false
+            self.errorMessage = "Failed to load groups: \(error.localizedDescription)"
+            self.showingError = true
+        }
+    }
+    
+    private func handleSignOut() {
+        let result = firebaseManager.signOut()
+        switch result {
+        case .success:
+            // Navigation handled by RootView
+            break
+        case .failure(let error):
+            errorMessage = "Failed to sign out: \(error.localizedDescription)"
+            showingError = true
         }
     }
 }
 
 // MARK: - Supporting Views
+
+struct LoadingView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: .bulkSharePrimary))
+                .scaleEffect(1.5)
+            
+            Text("Loading your groups...")
+                .font(.subheadline)
+                .foregroundColor(.bulkShareTextMedium)
+        }
+    }
+}
+
+struct StatsHeaderView: View {
+    let userGroups: [Group]
+    
+    private var activeGroups: Int {
+        userGroups.filter { $0.isActive }.count
+    }
+    
+    private var totalMembers: Int {
+        userGroups.reduce(0) { $0 + $1.memberCount }
+    }
+    
+    var body: some View {
+        HStack(spacing: 20) {
+            StatCard(
+                title: "Groups",
+                value: "\(userGroups.count)",
+                icon: "person.3.fill",
+                color: .bulkSharePrimary
+            )
+            
+            StatCard(
+                title: "Active",
+                value: "\(activeGroups)",
+                icon: "clock.fill",
+                color: .bulkShareSuccess
+            )
+            
+            StatCard(
+                title: "Members",
+                value: "\(totalMembers)",
+                icon: "person.2.fill",
+                color: .bulkShareInfo
+            )
+        }
+        .padding(.horizontal)
+        .padding(.top, 10)
+    }
+}
 
 struct StatCard: View {
     let title: String
@@ -143,6 +206,8 @@ struct StatCard: View {
 
 struct GroupCard: View {
     let group: Group
+    @State private var groupTrips: [Trip] = []
+    @State private var isLoadingTrips = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -188,15 +253,26 @@ struct GroupCard: View {
                     .lineLimit(2)
             }
             
-            // Footer
+            // Footer with Trip Info
             HStack {
-                Label("2 active trips", systemImage: "cart.fill")
-                    .font(.caption)
-                    .foregroundColor(.bulkShareInfo)
+                if isLoadingTrips {
+                    HStack {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .bulkShareInfo))
+                            .scaleEffect(0.8)
+                        Text("Loading trips...")
+                            .font(.caption)
+                            .foregroundColor(.bulkShareInfo)
+                    }
+                } else {
+                    Label("\(groupTrips.count) active trips", systemImage: "cart.fill")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareInfo)
+                }
                 
                 Spacer()
                 
-                Text("Updated 2h ago")
+                Text("Updated \(group.createdAt, style: .relative)")
                     .font(.caption)
                     .foregroundColor(.bulkShareTextLight)
             }
@@ -205,6 +281,27 @@ struct GroupCard: View {
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+        .onAppear {
+            loadGroupTrips()
+        }
+    }
+    
+    private func loadGroupTrips() {
+        isLoadingTrips = true
+        
+        Task {
+            do {
+                let trips = try await FirebaseManager.shared.getGroupTrips(groupId: group.id)
+                DispatchQueue.main.async {
+                    self.groupTrips = trips.filter { $0.status == .planned || $0.status == .inProgress }
+                    self.isLoadingTrips = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoadingTrips = false
+                }
+            }
+        }
     }
 }
 
@@ -242,6 +339,39 @@ struct EmptyGroupsView: View {
                     .foregroundColor(.bulkShareTextMedium)
                     .multilineTextAlignment(.center)
             }
+            
+            VStack(spacing: 12) {
+                Text("Get started by:")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.bulkShareTextDark)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.bulkSharePrimary)
+                        Text("Creating a new group")
+                            .font(.subheadline)
+                            .foregroundColor(.bulkShareTextMedium)
+                    }
+                    
+                    HStack {
+                        Image(systemName: "magnifyingglass.circle.fill")
+                            .foregroundColor(.bulkShareInfo)
+                        Text("Browsing existing groups")
+                            .font(.subheadline)
+                            .foregroundColor(.bulkShareTextMedium)
+                    }
+                    
+                    HStack {
+                        Image(systemName: "person.badge.plus.fill")
+                            .foregroundColor(.bulkShareSuccess)
+                        Text("Accepting group invitations")
+                            .font(.subheadline)
+                            .foregroundColor(.bulkShareTextMedium)
+                    }
+                }
+            }
         }
         .padding(40)
         .background(Color.white)
@@ -250,6 +380,39 @@ struct EmptyGroupsView: View {
     }
 }
 
+struct FloatingCreateButton: View {
+    let action: () -> Void
+    
+    var body: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button(action: action) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        
+                        Text("Create")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color.bulkSharePrimary)
+                    .cornerRadius(25)
+                    .shadow(color: Color.bulkSharePrimary.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
+            }
+        }
+    }
+}
+
 #Preview {
     MyGroupsView()
+        .environmentObject(FirebaseManager.shared)
 }
