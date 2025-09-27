@@ -1,0 +1,38 @@
+# Xcode
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+build/
+DerivedData/
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+Packages/
+Package.pins
+Package.resolved
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# CocoaPods
+Pods/
+*.xcworkspace
+
+# Firebase (for security)
+GoogleService-Info.plist
+
+# macOS
+.DS_Store
+
+# IDE
+*.swp
+*.swo
+*~
+*.tmp
+*.temp
