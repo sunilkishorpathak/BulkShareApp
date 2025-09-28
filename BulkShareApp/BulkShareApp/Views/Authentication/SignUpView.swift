@@ -20,6 +20,12 @@ struct SignUpView: View {
     @State private var navigateToLogin: Bool = false
     @Environment(\.dismiss) private var dismiss
     
+    @FocusState private var focusedField: Field?
+    
+    enum Field {
+        case fullName, email, paypalId, password, confirmPassword
+    }
+    
     var body: some View {
         ZStack {
             // Background Gradient
@@ -35,6 +41,7 @@ struct SignUpView: View {
             
             // Floating Background Elements
             FloatingElementsView()
+                .allowsHitTesting(false)
             
             ScrollView {
                 LazyVStack(spacing: 20) {
@@ -78,6 +85,8 @@ struct SignUpView: View {
                                 
                                 TextField("Enter your full name", text: $fullName)
                                     .textFieldStyle(BulkShareTextFieldStyle())
+                                    .focused($focusedField, equals: .fullName)
+                                    .submitLabel(.next)
                                     .autocapitalization(.words)
                             }
                             
@@ -93,6 +102,8 @@ struct SignUpView: View {
                                     .keyboardType(.emailAddress)
                                     .autocapitalization(.none)
                                     .autocorrectionDisabled()
+                                    .focused($focusedField, equals: .email)
+                                    .submitLabel(.next)
                             }
                             
                             // PayPal ID Field
@@ -107,6 +118,8 @@ struct SignUpView: View {
                                     .keyboardType(.emailAddress)
                                     .autocapitalization(.none)
                                     .autocorrectionDisabled()
+                                    .focused($focusedField, equals: .paypalId)
+                                    .submitLabel(.next)
                                 
                                 Text("Used for payment settlements")
                                     .font(.caption)
@@ -122,6 +135,8 @@ struct SignUpView: View {
                                 
                                 SecureField("Create a password", text: $password)
                                     .textFieldStyle(BulkShareTextFieldStyle())
+                                    .focused($focusedField, equals: .password)
+                                    .submitLabel(.next)
                             }
                             
                             // Confirm Password Field
@@ -133,6 +148,8 @@ struct SignUpView: View {
                                 
                                 SecureField("Confirm your password", text: $confirmPassword)
                                     .textFieldStyle(BulkShareTextFieldStyle())
+                                    .focused($focusedField, equals: .confirmPassword)
+                                    .submitLabel(.done)
                                 
                                 // Password match indicator
                                 if !confirmPassword.isEmpty {
@@ -146,26 +163,96 @@ struct SignUpView: View {
                                 }
                             }
                             
+                            // Form validation status (for debugging/user feedback)
+                            if !isFormValid && (!fullName.isEmpty || !email.isEmpty || !paypalId.isEmpty || !password.isEmpty || !confirmPassword.isEmpty) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Please complete:")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.bulkShareTextMedium)
+                                    
+                                    if fullName.isEmpty {
+                                        Text("• Full name is required")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                    if !isValidEmail(email) && !email.isEmpty {
+                                        Text("• Valid email is required")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                    if email.isEmpty {
+                                        Text("• Email is required")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                    if !isValidEmail(paypalId) && !paypalId.isEmpty {
+                                        Text("• Valid PayPal email is required")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                    if paypalId.isEmpty {
+                                        Text("• PayPal ID is required")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                    if password.count < 6 && !password.isEmpty {
+                                        Text("• Password must be at least 6 characters")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                    if password.isEmpty {
+                                        Text("• Password is required")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                    if password != confirmPassword && !confirmPassword.isEmpty {
+                                        Text("• Passwords must match")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                    if confirmPassword.isEmpty && !password.isEmpty {
+                                        Text("• Please confirm your password")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(8)
+                            }
+                            
                             // Create Account Button
                             Button(action: handleSignUp) {
-                                HStack {
+                                HStack(spacing: 8) {
                                     if isLoading {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                             .scaleEffect(0.8)
                                     } else {
+                                        if isFormValid {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 16, weight: .semibold))
+                                        }
                                         Text("Create Account")
                                             .fontWeight(.semibold)
                                     }
                                 }
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 50)
-                                .background(isFormValid ? Color.bulkSharePrimary : Color.gray)
+                                .background(isFormValid ? Color.bulkSharePrimary : Color.gray.opacity(0.6))
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(isFormValid ? Color.bulkSharePrimary : Color.clear, lineWidth: 2)
+                                        .animation(.easeInOut(duration: 0.3), value: isFormValid)
+                                )
                             }
                             .disabled(isLoading || !isFormValid)
-                            .animation(.easeInOut(duration: 0.2), value: isFormValid)
+                            .scaleEffect(isFormValid ? 1.02 : 1.0)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isFormValid)
                             
                             // Login Link
                             HStack {
@@ -190,6 +277,25 @@ struct SignUpView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .keyboardAdaptive()
+            .scrollIndicators(.hidden)
+            .onSubmit {
+                switch focusedField {
+                case .fullName:
+                    focusedField = .email
+                case .email:
+                    focusedField = .paypalId
+                case .paypalId:
+                    focusedField = .password
+                case .password:
+                    focusedField = .confirmPassword
+                case .confirmPassword:
+                    if isFormValid {
+                        handleSignUp()
+                    }
+                case .none:
+                    break
+                }
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)

@@ -12,6 +12,7 @@ struct MyGroupsView: View {
     @State private var userGroups: [Group] = []
     @State private var isLoading = true
     @State private var showingCreateGroup = false
+    @State private var showingProfile = false
     @State private var showingError = false
     @State private var errorMessage = ""
     
@@ -60,6 +61,12 @@ struct MyGroupsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: {
+                            showingProfile = true
+                        }) {
+                            Label("Profile & Settings", systemImage: "person.circle")
+                        }
+                        
+                        Button(action: {
                             Task { await loadUserGroups() }
                         }) {
                             Label("Refresh", systemImage: "arrow.clockwise")
@@ -78,6 +85,9 @@ struct MyGroupsView: View {
             }
             .sheet(isPresented: $showingCreateGroup) {
                 CreateGroupView()
+            }
+            .sheet(isPresented: $showingProfile) {
+                UserProfileView()
             }
             .alert("Error", isPresented: $showingError) {
                 Button("OK", role: .cancel) { }

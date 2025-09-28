@@ -40,6 +40,7 @@ struct LoginView: View {
             
             // Floating Background Elements
             FloatingElementsView()
+                .allowsHitTesting(false)
             
             ScrollView {
                 VStack(spacing: 30) {
@@ -145,6 +146,9 @@ struct LoginView: View {
                                     }
                                     .fontWeight(.semibold)
                                     .foregroundColor(.bulkSharePrimary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .contentShape(Rectangle())
                                 }
                                 .font(.subheadline)
                             }
@@ -216,7 +220,7 @@ struct LoginView: View {
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         LoginView()
     }
 }

@@ -19,6 +19,9 @@ struct MyTripsView: View {
     @State private var selectedTab: TripTab = .upcoming
     @State private var upcomingTrips: [Trip] = Trip.sampleTrips.filter { $0.isUpcoming }
     @State private var pastTrips: [Trip] = Trip.sampleTrips.filter { !$0.isUpcoming }
+    @State private var showingCreateTrip = false
+    @State private var showingGroupSelection = false
+    @State private var selectedGroup: Group?
     
     enum TripTab: String, CaseIterable {
         case upcoming = "Upcoming"
@@ -28,29 +31,67 @@ struct MyTripsView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Custom Tab Bar
-                TripTabBar(selectedTab: $selectedTab)
-                
-                // Content
-                TabView(selection: $selectedTab) {
-                    // Upcoming Trips
-                    UpcomingTripsView(trips: upcomingTrips)
-                        .tag(TripTab.upcoming)
+            ZStack {
+                VStack(spacing: 0) {
+                    // Custom Tab Bar
+                    TripTabBar(selectedTab: $selectedTab)
                     
-                    // Past Trips
-                    PastTripsView(trips: pastTrips)
-                        .tag(TripTab.past)
-                    
-                    // Hosting Trips
-                    HostingTripsView(trips: upcomingTrips)
-                        .tag(TripTab.hosting)
+                    // Content
+                    TabView(selection: $selectedTab) {
+                        // Upcoming Trips
+                        UpcomingTripsView(trips: upcomingTrips)
+                            .tag(TripTab.upcoming)
+                        
+                        // Past Trips
+                        PastTripsView(trips: pastTrips)
+                            .tag(TripTab.past)
+                        
+                        // Hosting Trips
+                        HostingTripsView(trips: upcomingTrips)
+                            .tag(TripTab.hosting)
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .background(Color.bulkShareBackground.ignoresSafeArea())
+                
+                // Floating Create Trip Button
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        FloatingCreateTripButton {
+                            showingGroupSelection = true
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 20)
+                    }
+                }
             }
-            .background(Color.bulkShareBackground.ignoresSafeArea())
             .navigationTitle("My Trips")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showingGroupSelection = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.bulkSharePrimary)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingGroupSelection) {
+                GroupSelectionView { group in
+                    selectedGroup = group
+                    showingGroupSelection = false
+                    showingCreateTrip = true
+                }
+            }
+            .sheet(isPresented: $showingCreateTrip) {
+                if let group = selectedGroup {
+                    CreateTripView(group: group)
+                }
+            }
         }
     }
 }
@@ -323,6 +364,135 @@ struct EmptyTripsView: View {
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+    }
+}
+
+struct FloatingCreateTripButton: View {
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Create Trip")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.bulkSharePrimary, Color.bulkShareSecondary]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(25)
+            .shadow(color: Color.bulkSharePrimary.opacity(0.3), radius: 8, x: 0, y: 4)
+        }
+        .scaleEffect(1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: true)
+    }
+}
+
+struct GroupSelectionView: View {
+    let onGroupSelected: (Group) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    private let availableGroups = Group.sampleGroups
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                // Header
+                VStack(spacing: 8) {
+                    Text("Select a Group")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.bulkShareTextDark)
+                    
+                    Text("Choose which group to create a trip for")
+                        .font(.subheadline)
+                        .foregroundColor(.bulkShareTextMedium)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                
+                // Groups List
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(availableGroups) { group in
+                            GroupSelectionCard(group: group) {
+                                onGroupSelected(group)
+                            }
+                        }
+                    }
+                    .padding()
+                }
+                
+                Spacer()
+            }
+            .background(Color.bulkShareBackground.ignoresSafeArea())
+            .navigationTitle("Create Trip")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct GroupSelectionCard: View {
+    let group: Group
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                // Group Icon
+                Text(group.icon)
+                    .font(.title2)
+                    .frame(width: 50, height: 50)
+                    .background(Color.bulkSharePrimary.opacity(0.1))
+                    .cornerRadius(12)
+                
+                // Group Info
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(group.name)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.bulkShareTextDark)
+                    
+                    Text("\(group.memberCount) members")
+                        .font(.subheadline)
+                        .foregroundColor(.bulkShareTextMedium)
+                    
+                    if !group.description.isEmpty {
+                        Text(group.description)
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextLight)
+                            .lineLimit(2)
+                    }
+                }
+                
+                Spacer()
+                
+                // Arrow
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.bulkShareTextLight)
+            }
+            .padding()
+            .background(Color.white)
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

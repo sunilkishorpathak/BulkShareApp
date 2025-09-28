@@ -30,6 +30,13 @@ struct MainTabView: View {
                     Image(systemName: "cart.fill")
                     Text("My Trips")
                 }
+            
+            // Profile Tab
+            UserProfileView()
+                .tabItem {
+                    Image(systemName: "person.circle")
+                    Text("Profile")
+                }
         }
         .accentColor(.bulkSharePrimary)
         .navigationBarBackButtonHidden(true)

@@ -239,21 +239,46 @@ struct CreateGroupView: View {
         
         isLoading = true
         
-        // Simulate API call for group creation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            isLoading = false
-            
+        Task {
             // Filter out empty emails
             let validEmails = memberEmails.filter { !$0.isEmpty && isValidEmail($0) }
             
-            let message = validEmails.isEmpty 
-                ? "Group \"\(groupName)\" has been created!"
-                : "Group \"\(groupName)\" has been created and invitations sent to \(validEmails.count) members."
+            // Create the group (simulate for now)
+            let groupId = UUID().uuidString
             
-            showAlert(
-                title: "Group Created!",
-                message: message
-            )
+            // Send invitation emails if there are valid emails
+            var emailResult: Result<Void, EmailError>?
+            if !validEmails.isEmpty {
+                emailResult = await EmailService.shared.sendGroupInvitations(
+                    groupName: groupName,
+                    inviterName: "Current User", // TODO: Get actual user name
+                    memberEmails: validEmails,
+                    groupId: groupId
+                )
+            }
+            
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                let message: String
+                if validEmails.isEmpty {
+                    message = "Group \"\(self.groupName)\" has been created!"
+                } else {
+                    switch emailResult {
+                    case .success:
+                        message = "Group \"\(self.groupName)\" has been created and invitations sent to \(validEmails.count) members."
+                    case .failure(let error):
+                        message = "Group \"\(self.groupName)\" has been created, but failed to send some invitations: \(error.localizedDescription)"
+                    case .none:
+                        message = "Group \"\(self.groupName)\" has been created!"
+                    }
+                }
+                
+                self.showAlert(
+                    title: "Group Created!",
+                    message: message
+                )
+            }
         }
     }
     
