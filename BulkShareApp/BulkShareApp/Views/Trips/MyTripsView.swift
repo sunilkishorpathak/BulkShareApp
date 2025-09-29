@@ -19,9 +19,14 @@ struct MyTripsView: View {
     @State private var selectedTab: TripTab = .upcoming
     @State private var upcomingTrips: [Trip] = Trip.sampleTrips.filter { $0.isUpcoming }
     @State private var pastTrips: [Trip] = Trip.sampleTrips.filter { !$0.isUpcoming }
-    @State private var showingCreateTrip = false
-    @State private var showingGroupSelection = false
+    @State private var showingTripFlow = false
+    @State private var tripFlowState: TripFlowState = .groupSelection
     @State private var selectedGroup: Group?
+    
+    enum TripFlowState {
+        case groupSelection
+        case createTrip(Group)
+    }
     
     enum TripTab: String, CaseIterable {
         case upcoming = "Upcoming"
@@ -60,7 +65,8 @@ struct MyTripsView: View {
                     HStack {
                         Spacer()
                         FloatingCreateTripButton {
-                            showingGroupSelection = true
+                            tripFlowState = .groupSelection
+                            showingTripFlow = true
                         }
                         .padding(.trailing, 20)
                         .padding(.bottom, 20)
@@ -72,7 +78,8 @@ struct MyTripsView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        showingGroupSelection = true
+                        tripFlowState = .groupSelection
+                        showingTripFlow = true
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 18, weight: .semibold))
@@ -80,15 +87,13 @@ struct MyTripsView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingGroupSelection) {
-                GroupSelectionView { group in
-                    selectedGroup = group
-                    showingGroupSelection = false
-                    showingCreateTrip = true
-                }
-            }
-            .sheet(isPresented: $showingCreateTrip) {
-                if let group = selectedGroup {
+            .sheet(isPresented: $showingTripFlow) {
+                switch tripFlowState {
+                case .groupSelection:
+                    GroupSelectionView { group in
+                        tripFlowState = .createTrip(group)
+                    }
+                case .createTrip(let group):
                     CreateTripView(group: group)
                 }
             }
@@ -399,8 +404,10 @@ struct FloatingCreateTripButton: View {
 struct GroupSelectionView: View {
     let onGroupSelected: (Group) -> Void
     @Environment(\.dismiss) private var dismiss
-    
-    private let availableGroups = Group.sampleGroups
+    @State private var availableGroups: [Group] = []
+    @State private var isLoading = true
+    @State private var showingError = false
+    @State private var errorMessage = ""
     
     var body: some View {
         NavigationView {
@@ -420,15 +427,44 @@ struct GroupSelectionView: View {
                 .padding()
                 
                 // Groups List
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(availableGroups) { group in
-                            GroupSelectionCard(group: group) {
-                                onGroupSelected(group)
+                if isLoading {
+                    VStack {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .bulkSharePrimary))
+                            .scaleEffect(1.2)
+                        Text("Loading your groups...")
+                            .font(.subheadline)
+                            .foregroundColor(.bulkShareTextMedium)
+                            .padding(.top)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if availableGroups.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "person.3.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.bulkShareTextLight)
+                        
+                        Text("No Groups Available")
+                            .font(.headline)
+                            .foregroundColor(.bulkShareTextDark)
+                        
+                        Text("Create a group first to start planning trips")
+                            .font(.subheadline)
+                            .foregroundColor(.bulkShareTextMedium)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(availableGroups) { group in
+                                GroupSelectionCard(group: group) {
+                                    onGroupSelected(group)
+                                }
                             }
                         }
+                        .padding()
                     }
-                    .padding()
                 }
                 
                 Spacer()
@@ -441,6 +477,34 @@ struct GroupSelectionView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                }
+            }
+            .alert("Error", isPresented: $showingError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
+            .onAppear {
+                loadUserGroups()
+            }
+        }
+    }
+    
+    private func loadUserGroups() {
+        isLoading = true
+        
+        Task {
+            do {
+                let groups = try await FirebaseManager.shared.getUserGroups()
+                DispatchQueue.main.async {
+                    self.availableGroups = groups
+                    self.isLoading = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.errorMessage = "Failed to load groups: \(error.localizedDescription)"
+                    self.showingError = true
                 }
             }
         }

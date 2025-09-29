@@ -94,18 +94,49 @@ struct CreateTripView: View {
     }
     
     private func handleCreateTrip() {
+        guard let currentUser = FirebaseManager.shared.currentUser else {
+            showAlert(title: "Error", message: "Please sign in to create a trip")
+            return
+        }
+        
         isLoading = true
         
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isLoading = false
-            
-            let totalValue = tripItems.reduce(0) { $0 + ($1.estimatedPrice * Double($1.quantityAvailable)) }
-            
-            showAlert(
-                title: "Trip Created!",
-                message: "Your \(selectedStore.displayName) trip with \(tripItems.count) items (estimated $\(String(format: "%.2f", totalValue))) has been posted to \(group.name)."
-            )
+        Task {
+            do {
+                // Create the trip object
+                let trip = Trip(
+                    groupId: group.id,
+                    shopperId: currentUser.id,
+                    store: selectedStore,
+                    scheduledDate: scheduledDate,
+                    items: tripItems,
+                    status: .planned,
+                    participants: [],
+                    notes: notes.isEmpty ? nil : notes
+                )
+                
+                // Save to Firestore
+                let tripId = try await FirebaseManager.shared.createTrip(trip)
+                
+                let totalValue = tripItems.reduce(0) { $0 + ($1.estimatedPrice * Double($1.quantityAvailable)) }
+                
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.showAlert(
+                        title: "Trip Created!",
+                        message: "Your \(self.selectedStore.displayName) trip with \(self.tripItems.count) items (estimated $\(String(format: "%.2f", totalValue))) has been posted to \(self.group.name)."
+                    )
+                }
+                
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.showAlert(
+                        title: "Error",
+                        message: "Failed to create trip: \(error.localizedDescription)"
+                    )
+                }
+            }
         }
     }
     

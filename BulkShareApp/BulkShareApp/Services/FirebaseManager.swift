@@ -274,6 +274,7 @@ class FirebaseManager: ObservableObject {
             "name": group.name,
             "description": group.description,
             "members": group.members,
+            "invitedEmails": group.invitedEmails,
             "icon": group.icon,
             "createdAt": group.createdAt,
             "adminId": group.adminId,
@@ -298,12 +299,40 @@ class FirebaseManager: ObservableObject {
                 name: data["name"] as? String ?? "",
                 description: data["description"] as? String ?? "",
                 members: data["members"] as? [String] ?? [],
+                invitedEmails: data["invitedEmails"] as? [String] ?? [],
                 icon: data["icon"] as? String ?? "👥",
                 createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                 adminId: data["adminId"] as? String ?? "",
                 isActive: data["isActive"] as? Bool ?? true
             )
         }
+    }
+    
+    func createTrip(_ trip: Trip) async throws -> String {
+        let tripData: [String: Any] = [
+            "id": trip.id,
+            "groupId": trip.groupId,
+            "shopperId": trip.shopperId,
+            "store": trip.store.rawValue,
+            "scheduledDate": trip.scheduledDate,
+            "items": trip.items.map { item in
+                [
+                    "id": item.id,
+                    "name": item.name,
+                    "quantityAvailable": item.quantityAvailable,
+                    "estimatedPrice": item.estimatedPrice,
+                    "category": item.category.rawValue,
+                    "notes": item.notes ?? ""
+                ]
+            },
+            "status": trip.status.rawValue,
+            "createdAt": trip.createdAt,
+            "participants": trip.participants,
+            "notes": trip.notes ?? ""
+        ]
+        
+        let docRef = try await firestore.collection("trips").addDocument(data: tripData)
+        return docRef.documentID
     }
     
     func getGroupTrips(groupId: String) async throws -> [Trip] {

@@ -237,47 +237,73 @@ struct CreateGroupView: View {
             return
         }
         
+        guard let currentUser = FirebaseManager.shared.currentUser else {
+            showAlert(title: "Error", message: "Please sign in to create a group")
+            return
+        }
+        
         isLoading = true
         
         Task {
             // Filter out empty emails
             let validEmails = memberEmails.filter { !$0.isEmpty && isValidEmail($0) }
             
-            // Create the group (simulate for now)
-            let groupId = UUID().uuidString
+            // Create the group object
+            let group = Group(
+                name: groupName,
+                description: groupDescription,
+                members: [currentUser.id], // Add current user as first member
+                invitedEmails: validEmails, // Add invited emails
+                icon: selectedIcon,
+                adminId: currentUser.id
+            )
             
-            // Send invitation emails if there are valid emails
-            var emailResult: Result<Void, EmailError>?
-            if !validEmails.isEmpty {
-                emailResult = await EmailService.shared.sendGroupInvitations(
-                    groupName: groupName,
-                    inviterName: "Current User", // TODO: Get actual user name
-                    memberEmails: validEmails,
-                    groupId: groupId
-                )
-            }
-            
-            DispatchQueue.main.async {
-                self.isLoading = false
+            do {
+                // Save group to Firestore
+                let groupId = try await FirebaseManager.shared.createGroup(group)
                 
-                let message: String
-                if validEmails.isEmpty {
-                    message = "Group \"\(self.groupName)\" has been created!"
-                } else {
-                    switch emailResult {
-                    case .success:
-                        message = "Group \"\(self.groupName)\" has been created and invitations sent to \(validEmails.count) members."
-                    case .failure(let error):
-                        message = "Group \"\(self.groupName)\" has been created, but failed to send some invitations: \(error.localizedDescription)"
-                    case .none:
-                        message = "Group \"\(self.groupName)\" has been created!"
-                    }
+                // Send invitation emails if there are valid emails
+                var emailResult: Result<Void, EmailError>?
+                if !validEmails.isEmpty {
+                    emailResult = await EmailService.shared.sendGroupInvitations(
+                        groupName: groupName,
+                        inviterName: currentUser.name,
+                        memberEmails: validEmails,
+                        groupId: groupId
+                    )
                 }
                 
-                self.showAlert(
-                    title: "Group Created!",
-                    message: message
-                )
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    
+                    let message: String
+                    if validEmails.isEmpty {
+                        message = "Group \"\(self.groupName)\" has been created!"
+                    } else {
+                        switch emailResult {
+                        case .success:
+                            message = "Group \"\(self.groupName)\" has been created and invitations sent to \(validEmails.count) members."
+                        case .failure(let error):
+                            message = "Group \"\(self.groupName)\" has been created, but failed to send some invitations: \(error.localizedDescription)"
+                        case .none:
+                            message = "Group \"\(self.groupName)\" has been created!"
+                        }
+                    }
+                    
+                    self.showAlert(
+                        title: "Group Created!",
+                        message: message
+                    )
+                }
+                
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.showAlert(
+                        title: "Error",
+                        message: "Failed to create group: \(error.localizedDescription)"
+                    )
+                }
             }
         }
     }

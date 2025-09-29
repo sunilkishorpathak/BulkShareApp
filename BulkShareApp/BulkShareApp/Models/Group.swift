@@ -20,6 +20,7 @@ struct Group: Identifiable, Codable {
     var name: String
     var description: String
     var members: [String] // User IDs
+    var invitedEmails: [String] // Invited email addresses that haven't joined yet
     var icon: String
     let createdAt: Date
     var adminId: String
@@ -30,6 +31,7 @@ struct Group: Identifiable, Codable {
          name: String,
          description: String = "",
          members: [String] = [],
+         invitedEmails: [String] = [],
          icon: String = "👥",
          createdAt: Date = Date(),
          adminId: String,
@@ -38,6 +40,7 @@ struct Group: Identifiable, Codable {
         self.name = name
         self.description = description
         self.members = members
+        self.invitedEmails = invitedEmails
         self.icon = icon
         self.createdAt = createdAt
         self.adminId = adminId
@@ -46,7 +49,7 @@ struct Group: Identifiable, Codable {
     
     // MARK: - Computed Properties
     var memberCount: Int {
-        return members.count
+        return members.count + invitedEmails.count
     }
     
     var isUserAdmin: Bool {
@@ -61,6 +64,7 @@ extension Group {
             name: "Sage Elite Family",
             description: "Family bulk shopping group for cost savings",
             members: ["user1", "user2", "user3", "user4"],
+            invitedEmails: [],
             icon: "👨‍👩‍👧‍👦",
             adminId: "user1"
         ),
@@ -68,6 +72,7 @@ extension Group {
             name: "Building 7 Neighbors",
             description: "Neighbors sharing bulk purchases from Costco",
             members: ["user1", "user5", "user6", "user7", "user8"],
+            invitedEmails: [],
             icon: "🏢",
             adminId: "user5"
         ),
@@ -75,6 +80,7 @@ extension Group {
             name: "Oak Street Community",
             description: "Community group for sustainable shopping",
             members: ["user9", "user10", "user11"],
+            invitedEmails: [],
             icon: "🏘️",
             adminId: "user9"
         )

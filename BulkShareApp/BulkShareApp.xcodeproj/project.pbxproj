@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B185BB0BB2518F8B5864F8F9 /* Pods_BulkShareApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C2BE1FBD1D863F8E41993D3 /* Pods_BulkShareApp.framework */; };
+		269668719B9FB94E0409D973 /* Pods_BulkShareApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 75F0744AB38B2AB5D0ACD53B /* Pods_BulkShareApp.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,27 +28,33 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		6C2BE1FBD1D863F8E41993D3 /* Pods_BulkShareApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BulkShareApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		80865CDC9F6654328853FA13 /* Pods-BulkShareApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkShareApp.debug.xcconfig"; path = "Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp.debug.xcconfig"; sourceTree = "<group>"; };
-		A8D0F20D35C55CF58E5885DA /* Pods-BulkShareApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkShareApp.release.xcconfig"; path = "Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp.release.xcconfig"; sourceTree = "<group>"; };
+		01A995C1C3969C3C66A5DECB /* Pods-BulkShareApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkShareApp.debug.xcconfig"; path = "Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp.debug.xcconfig"; sourceTree = "<group>"; };
+		75F0744AB38B2AB5D0ACD53B /* Pods_BulkShareApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BulkShareApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B90C7FFA2E87D3F000F3251D /* BulkShareApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BulkShareApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B90C80072E87D3F300F3251D /* BulkShareAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkShareAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B90C80112E87D3F300F3251D /* BulkShareAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkShareAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CDD199D972F6955443D98426 /* Pods-BulkShareApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkShareApp.release.xcconfig"; path = "Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B90C7FFC2E87D3F000F3251D /* BulkShareApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = BulkShareApp;
 			sourceTree = "<group>";
 		};
 		B90C800A2E87D3F300F3251D /* BulkShareAppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = BulkShareAppTests;
 			sourceTree = "<group>";
 		};
 		B90C80142E87D3F300F3251D /* BulkShareAppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = BulkShareAppUITests;
 			sourceTree = "<group>";
 		};
@@ -59,7 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B185BB0BB2518F8B5864F8F9 /* Pods_BulkShareApp.framework in Frameworks */,
+				269668719B9FB94E0409D973 /* Pods_BulkShareApp.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,11 +86,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5D88E26DD7DC3773F1101D23 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				75F0744AB38B2AB5D0ACD53B /* Pods_BulkShareApp.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		6EB991F3C1D0EC5CB0044815 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				80865CDC9F6654328853FA13 /* Pods-BulkShareApp.debug.xcconfig */,
-				A8D0F20D35C55CF58E5885DA /* Pods-BulkShareApp.release.xcconfig */,
+				01A995C1C3969C3C66A5DECB /* Pods-BulkShareApp.debug.xcconfig */,
+				CDD199D972F6955443D98426 /* Pods-BulkShareApp.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -97,7 +111,7 @@
 				B90C80142E87D3F300F3251D /* BulkShareAppUITests */,
 				B90C7FFB2E87D3F000F3251D /* Products */,
 				6EB991F3C1D0EC5CB0044815 /* Pods */,
-				E78149EEEAD2BAA7C7476FB3 /* Frameworks */,
+				5D88E26DD7DC3773F1101D23 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -111,14 +125,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		E78149EEEAD2BAA7C7476FB3 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				6C2BE1FBD1D863F8E41993D3 /* Pods_BulkShareApp.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -126,11 +132,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = B90C801B2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkShareApp" */;
 			buildPhases = (
-				42256226A1F066D88874A582 /* [CP] Check Pods Manifest.lock */,
+				153B87C4E816EC607DF85CE9 /* [CP] Check Pods Manifest.lock */,
 				B90C7FF62E87D3EF00F3251D /* Sources */,
 				B90C7FF72E87D3EF00F3251D /* Frameworks */,
 				B90C7FF82E87D3EF00F3251D /* Resources */,
-				83061302473B23B5B7F34743 /* [CP] Embed Pods Frameworks */,
+				F917FC8DA2752FE1E5CE83F6 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -255,7 +261,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		42256226A1F066D88874A582 /* [CP] Check Pods Manifest.lock */ = {
+		153B87C4E816EC607DF85CE9 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -277,7 +283,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		83061302473B23B5B7F34743 /* [CP] Embed Pods Frameworks */ = {
+		F917FC8DA2752FE1E5CE83F6 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -285,13 +291,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -459,7 +461,7 @@
 		};
 		B90C801C2E87D3F300F3251D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 80865CDC9F6654328853FA13 /* Pods-BulkShareApp.debug.xcconfig */;
+			baseConfigurationReference = 01A995C1C3969C3C66A5DECB /* Pods-BulkShareApp.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -491,7 +493,7 @@
 		};
 		B90C801D2E87D3F300F3251D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A8D0F20D35C55CF58E5885DA /* Pods-BulkShareApp.release.xcconfig */;
+			baseConfigurationReference = CDD199D972F6955443D98426 /* Pods-BulkShareApp.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

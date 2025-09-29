@@ -121,7 +121,7 @@ struct SignUpView: View {
                                     .focused($focusedField, equals: .paypalId)
                                     .submitLabel(.next)
                                 
-                                Text("Used for payment settlements")
+                                Text("Optional - for payment settlements")
                                     .font(.caption)
                                     .foregroundColor(.bulkShareTextLight)
                             }
@@ -186,13 +186,8 @@ struct SignUpView: View {
                                             .font(.caption)
                                             .foregroundColor(.red)
                                     }
-                                    if !isValidEmail(paypalId) && !paypalId.isEmpty {
-                                        Text("• Valid PayPal email is required")
-                                            .font(.caption)
-                                            .foregroundColor(.red)
-                                    }
-                                    if paypalId.isEmpty {
-                                        Text("• PayPal ID is required")
+                                    if !paypalId.isEmpty && !isValidEmail(paypalId) {
+                                        Text("• Valid PayPal email format required (if provided)")
                                             .font(.caption)
                                             .foregroundColor(.red)
                                     }
@@ -322,7 +317,7 @@ struct SignUpView: View {
     private var isFormValid: Bool {
         return !fullName.isEmpty &&
                isValidEmail(email) &&
-               isValidEmail(paypalId) &&
+               (paypalId.isEmpty || isValidEmail(paypalId)) && // PayPal ID is optional, but if provided must be valid
                password.count >= 6 &&
                password == confirmPassword &&
                !password.isEmpty &&

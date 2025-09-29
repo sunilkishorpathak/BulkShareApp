@@ -136,6 +136,8 @@ struct GroupStatCard: View {
 struct GroupMembersSection: View {
     let group: Group
     @State private var showingAllMembers = false
+    @State private var groupMembers: [User] = []
+    @State private var isLoadingMembers = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -158,47 +160,14 @@ struct GroupMembersSection: View {
             
             // Member List
             VStack(spacing: 12) {
-                ForEach(User.sampleUsers.prefix(3), id: \.id) { user in
-                    HStack {
-                        // Avatar
-                        Text(user.initials)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .frame(width: 44, height: 44)
-                            .background(Color.bulkSharePrimary)
-                            .cornerRadius(22)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(user.name)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.bulkShareTextDark)
-                            
-                            Text(user.email)
-                                .font(.caption)
-                                .foregroundColor(.bulkShareTextMedium)
-                        }
-                        
-                        Spacer()
-                        
-                        VStack(alignment: .trailing, spacing: 2) {
-                            if user.id == group.adminId {
-                                Badge(text: "Admin", color: .bulkShareInfo)
-                            }
-                            
-                            // Online status indicator
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(Color.bulkShareSuccess)
-                                    .frame(width: 8, height: 8)
-                                Text("Active")
-                                    .font(.caption2)
-                                    .foregroundColor(.bulkShareSuccess)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 4)
+                // Show actual members
+                ForEach(groupMembers.prefix(2), id: \.id) { user in
+                    MemberRow(user: user, group: group, isActualMember: true)
+                }
+                
+                // Show invited emails
+                ForEach(group.invitedEmails.prefix(3 - min(2, groupMembers.count)), id: \.self) { email in
+                    InvitedEmailRow(email: email)
                 }
             }
             
@@ -232,6 +201,34 @@ struct GroupMembersSection: View {
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
         .sheet(isPresented: $showingAllMembers) {
             AllMembersView(group: group)
+        }
+        .onAppear {
+            loadGroupMembers()
+        }
+    }
+    
+    private func loadGroupMembers() {
+        isLoadingMembers = true
+        
+        Task {
+            do {
+                // Load actual users from Firestore for the member IDs
+                var members: [User] = []
+                for memberId in group.members {
+                    if let user = try? await FirebaseManager.shared.getUser(uid: memberId) {
+                        members.append(user)
+                    }
+                }
+                
+                DispatchQueue.main.async {
+                    self.groupMembers = members
+                    self.isLoadingMembers = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoadingMembers = false
+                }
+            }
         }
     }
 }
@@ -634,6 +631,100 @@ struct SettingsRow: View {
             .cornerRadius(8)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Helper Views for Members
+
+struct MemberRow: View {
+    let user: User
+    let group: Group
+    let isActualMember: Bool
+    
+    var body: some View {
+        HStack {
+            // Avatar
+            Text(user.initials)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+                .frame(width: 44, height: 44)
+                .background(Color.bulkSharePrimary)
+                .cornerRadius(22)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(user.name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.bulkShareTextDark)
+                
+                Text(user.email)
+                    .font(.caption)
+                    .foregroundColor(.bulkShareTextMedium)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 2) {
+                if user.id == group.adminId {
+                    Badge(text: "Admin", color: .bulkShareInfo)
+                }
+                
+                // Status indicator
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(isActualMember ? Color.bulkShareSuccess : Color.bulkShareWarning)
+                        .frame(width: 8, height: 8)
+                    Text(isActualMember ? "Active" : "Invited")
+                        .font(.caption2)
+                        .foregroundColor(isActualMember ? .bulkShareSuccess : .bulkShareWarning)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct InvitedEmailRow: View {
+    let email: String
+    
+    var body: some View {
+        HStack {
+            // Avatar placeholder
+            Text("📧")
+                .font(.title3)
+                .frame(width: 44, height: 44)
+                .background(Color.bulkShareWarning.opacity(0.2))
+                .cornerRadius(22)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Invited")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.bulkShareTextDark)
+                
+                Text(email)
+                    .font(.caption)
+                    .foregroundColor(.bulkShareTextMedium)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 2) {
+                Badge(text: "Pending", color: .bulkShareWarning)
+                
+                // Status indicator
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.bulkShareWarning)
+                        .frame(width: 8, height: 8)
+                    Text("Invited")
+                        .font(.caption2)
+                        .foregroundColor(.bulkShareWarning)
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
