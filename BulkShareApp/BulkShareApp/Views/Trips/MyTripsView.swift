@@ -17,8 +17,10 @@ import SwiftUI
 
 struct MyTripsView: View {
     @State private var selectedTab: TripTab = .upcoming
-    @State private var upcomingTrips: [Trip] = Trip.sampleTrips.filter { $0.isUpcoming }
-    @State private var pastTrips: [Trip] = Trip.sampleTrips.filter { !$0.isUpcoming }
+    @State private var upcomingTrips: [Trip] = []
+    @State private var pastTrips: [Trip] = []
+    @State private var hostingTrips: [Trip] = []
+    @State private var isLoadingTrips = false
     @State private var showingTripFlow = false
     @State private var tripFlowState: TripFlowState = .groupSelection
     @State private var selectedGroup: Group?
@@ -52,7 +54,7 @@ struct MyTripsView: View {
                             .tag(TripTab.past)
                         
                         // Hosting Trips
-                        HostingTripsView(trips: upcomingTrips)
+                        HostingTripsView(trips: hostingTrips)
                             .tag(TripTab.hosting)
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
@@ -75,18 +77,6 @@ struct MyTripsView: View {
             }
             .navigationTitle("My Trips")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        tripFlowState = .groupSelection
-                        showingTripFlow = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.bulkSharePrimary)
-                    }
-                }
-            }
             .sheet(isPresented: $showingTripFlow) {
                 switch tripFlowState {
                 case .groupSelection:
@@ -95,6 +85,48 @@ struct MyTripsView: View {
                     }
                 case .createTrip(let group):
                     CreateTripView(group: group)
+                }
+            }
+            .onAppear {
+                loadUserTrips()
+            }
+            .refreshable {
+                loadUserTrips()
+            }
+        }
+    }
+    
+    private func loadUserTrips() {
+        isLoadingTrips = true
+        
+        Task {
+            do {
+                let trips = try await FirebaseManager.shared.getUserTrips()
+                
+                DispatchQueue.main.async {
+                    // Filter trips by category
+                    let now = Date()
+                    let currentUserId = FirebaseManager.shared.currentUser?.id ?? ""
+                    
+                    self.upcomingTrips = trips.filter { trip in
+                        trip.scheduledDate > now && trip.status == .planned
+                    }
+                    
+                    self.pastTrips = trips.filter { trip in
+                        trip.scheduledDate <= now || trip.status == .completed
+                    }
+                    
+                    self.hostingTrips = trips.filter { trip in
+                        trip.shopperId == currentUserId && trip.status == .planned
+                    }
+                    
+                    self.isLoadingTrips = false
+                }
+                
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoadingTrips = false
+                    print("Error loading trips: \(error)")
                 }
             }
         }

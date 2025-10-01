@@ -67,6 +67,14 @@ struct CreateTripView: View {
                     Button("Cancel") { dismiss() }
                         .foregroundColor(.bulkSharePrimary)
                 }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Home") { 
+                        // Dismiss all the way to root
+                        dismiss()
+                    }
+                    .foregroundColor(.bulkSharePrimary)
+                }
             }
             .sheet(isPresented: $showingAddItem) {
                 AddTripItemView { item in
@@ -74,10 +82,16 @@ struct CreateTripView: View {
                 }
             }
             .alert(alertTitle, isPresented: $showingAlert) {
-                Button("OK", role: .cancel) {
-                    if alertTitle == "Trip Created!" {
+                if alertTitle == "Trip Created!" {
+                    Button("Create Another") {
+                        // Reset form for another trip
+                        resetForm()
+                    }
+                    Button("Go Home") {
                         dismiss()
                     }
+                } else {
+                    Button("OK", role: .cancel) { }
                 }
             } message: {
                 Text(alertMessage)
@@ -138,6 +152,15 @@ struct CreateTripView: View {
                 }
             }
         }
+    }
+    
+    private func resetForm() {
+        tripItems.removeAll()
+        scheduledDate = Calendar.current.date(byAdding: .hour, value: 2, to: Date()) ?? Date()
+        notes = ""
+        selectedStore = .costco
+        alertTitle = ""
+        alertMessage = ""
     }
     
     private func showAlert(title: String, message: String) {

@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @StateObject private var notificationManager = NotificationManager.shared
+    
     var body: some View {
         TabView {
             // My Groups Tab
@@ -31,6 +33,13 @@ struct MainTabView: View {
                     Text("My Trips")
                 }
             
+            // Notifications Tab
+            NotificationsView()
+                .tabItem {
+                    Image(systemName: notificationManager.unreadCount > 0 ? "bell.badge.fill" : "bell")
+                    Text("Notifications")
+                }
+            
             // Profile Tab
             UserProfileView()
                 .tabItem {
@@ -40,6 +49,14 @@ struct MainTabView: View {
         }
         .accentColor(.bulkSharePrimary)
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            startListeningForNotifications()
+        }
+    }
+    
+    private func startListeningForNotifications() {
+        guard let currentUser = FirebaseManager.shared.currentUser else { return }
+        notificationManager.startListening(for: currentUser.id)
     }
 }
 

@@ -17,9 +17,12 @@ import SwiftUI
 
 struct BrowseGroupsView: View {
     @State private var searchText = ""
-    @State private var availableGroups: [Group] = Group.sampleGroups
+    @State private var availableGroups: [Group] = []
+    @State private var isLoading = true
     @State private var showingJoinAlert = false
     @State private var selectedGroup: Group?
+    @State private var showingError = false
+    @State private var errorMessage = ""
     
     var filteredGroups: [Group] {
         if searchText.isEmpty {
@@ -43,25 +46,44 @@ struct BrowseGroupsView: View {
                         .padding()
                     
                     // Groups List
-                    ScrollView {
-                        LazyVStack(spacing: 16) {
-                            if filteredGroups.isEmpty {
-                                EmptySearchView(searchText: searchText)
-                            } else {
-                                ForEach(filteredGroups) { group in
-                                    BrowseGroupCard(group: group) {
-                                        selectedGroup = group
-                                        showingJoinAlert = true
+                    if isLoading {
+                        VStack(spacing: 20) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .bulkSharePrimary))
+                                .scaleEffect(1.5)
+                            
+                            Text("Loading available groups...")
+                                .font(.subheadline)
+                                .foregroundColor(.bulkShareTextMedium)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: 16) {
+                                if filteredGroups.isEmpty {
+                                    EmptySearchView(searchText: searchText)
+                                } else {
+                                    ForEach(filteredGroups) { group in
+                                        BrowseGroupCard(group: group) {
+                                            selectedGroup = group
+                                            showingJoinAlert = true
+                                        }
                                     }
                                 }
                             }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
+                        .refreshable {
+                            await loadAllGroups()
+                        }
                     }
                 }
             }
             .navigationTitle("Browse Groups")
             .navigationBarTitleDisplayMode(.large)
+            .onAppear {
+                Task { await loadAllGroups() }
+            }
             .alert("Join Group", isPresented: $showingJoinAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Request to Join") {
@@ -74,6 +96,26 @@ struct BrowseGroupsView: View {
                     Text("Would you like to request to join \"\(group.name)\"?")
                 }
             }
+            .alert("Error", isPresented: $showingError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
+        }
+    }
+    
+    @MainActor
+    private func loadAllGroups() async {
+        isLoading = true
+        
+        do {
+            let groups = try await FirebaseManager.shared.getAllGroups()
+            self.availableGroups = groups
+            self.isLoading = false
+        } catch {
+            self.isLoading = false
+            self.errorMessage = "Failed to load groups: \(error.localizedDescription)"
+            self.showingError = true
         }
     }
     

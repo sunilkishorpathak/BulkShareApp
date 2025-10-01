@@ -95,9 +95,7 @@ struct MyGroupsView: View {
                 Text(errorMessage)
             }
             .onAppear {
-                if userGroups.isEmpty {
-                    Task { await loadUserGroups() }
-                }
+                Task { await loadUserGroups() }
             }
         }
     }

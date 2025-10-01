@@ -101,6 +101,8 @@ struct TripDetailView: View {
 
 struct TripDetailHeader: View {
     let trip: Trip
+    @State private var shopperName: String = "Loading..."
+    @State private var isLoadingShopper = true
     
     var body: some View {
         VStack(spacing: 16) {
@@ -144,7 +146,7 @@ struct TripDetailHeader: View {
                         .font(.caption)
                         .foregroundColor(.bulkShareTextMedium)
                     
-                    Text("Sarah Kumar") // In real app, fetch from shopperId
+                    Text(shopperName)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.bulkShareTextDark)
@@ -184,6 +186,26 @@ struct TripDetailHeader: View {
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+        .onAppear {
+            loadShopperName()
+        }
+    }
+    
+    private func loadShopperName() {
+        Task {
+            do {
+                let shopperUser = try await FirebaseManager.shared.getUser(uid: trip.shopperId)
+                DispatchQueue.main.async {
+                    self.shopperName = shopperUser.name
+                    self.isLoadingShopper = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.shopperName = "Unknown User"
+                    self.isLoadingShopper = false
+                }
+            }
+        }
     }
 }
 

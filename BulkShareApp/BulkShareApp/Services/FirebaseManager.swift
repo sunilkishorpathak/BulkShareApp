@@ -285,6 +285,46 @@ class FirebaseManager: ObservableObject {
         return docRef.documentID
     }
     
+    func getAllGroups() async throws -> [Group] {
+        let snapshot = try await firestore.collection("groups")
+            .getDocuments()
+        
+        let groups = snapshot.documents.compactMap { doc -> Group? in
+            let data = doc.data()
+            let group = Group(
+                id: doc.documentID,
+                name: data["name"] as? String ?? "",
+                description: data["description"] as? String ?? "",
+                members: data["members"] as? [String] ?? [],
+                invitedEmails: data["invitedEmails"] as? [String] ?? [],
+                icon: data["icon"] as? String ?? "👥",
+                createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                adminId: data["adminId"] as? String ?? "",
+                isActive: data["isActive"] as? Bool ?? true
+            )
+            
+            // Filter active groups client-side
+            return group.isActive ? group : nil
+        }
+        
+        // Sort by creation date client-side
+        return groups.sorted { $0.createdAt > $1.createdAt }
+    }
+    
+    func updateGroup(_ group: Group) async throws {
+        let groupData: [String: Any] = [
+            "name": group.name,
+            "description": group.description,
+            "members": group.members,
+            "invitedEmails": group.invitedEmails,
+            "icon": group.icon,
+            "adminId": group.adminId,
+            "isActive": group.isActive
+        ]
+        
+        try await firestore.collection("groups").document(group.id).updateData(groupData)
+    }
+    
     func getUserGroups() async throws -> [Group] {
         guard let currentUser = currentUser else { return [] }
         
@@ -335,39 +375,62 @@ class FirebaseManager: ObservableObject {
         return docRef.documentID
     }
     
+    func getUserTrips() async throws -> [Trip] {
+        guard let currentUser = currentUser else { return [] }
+        
+        // Get all trips and filter client-side to avoid complex indexing
+        let snapshot = try await firestore.collection("trips")
+            .getDocuments()
+        
+        let allTrips = snapshot.documents.compactMap { document -> Trip? in
+            guard let trip = parseTrip(from: document) else { return nil }
+            
+            // Include trips where user is shopper or participant
+            if trip.shopperId == currentUser.id || trip.participants.contains(currentUser.id) {
+                return trip
+            }
+            
+            return nil
+        }
+        
+        return allTrips.sorted { $0.scheduledDate < $1.scheduledDate }
+    }
+    
+    private func parseTrip(from document: QueryDocumentSnapshot) -> Trip? {
+        let data = document.data()
+        
+        let items = (data["items"] as? [[String: Any]] ?? []).compactMap { itemData in
+            TripItem(
+                id: itemData["id"] as? String ?? UUID().uuidString,
+                name: itemData["name"] as? String ?? "",
+                quantityAvailable: itemData["quantityAvailable"] as? Int ?? 1,
+                estimatedPrice: itemData["estimatedPrice"] as? Double ?? 0.0,
+                category: ItemCategory(rawValue: itemData["category"] as? String ?? "grocery") ?? .grocery,
+                notes: itemData["notes"] as? String
+            )
+        }
+        
+        return Trip(
+            id: document.documentID,
+            groupId: data["groupId"] as? String ?? "",
+            shopperId: data["shopperId"] as? String ?? "",
+            store: Store(rawValue: data["store"] as? String ?? "costco") ?? .costco,
+            scheduledDate: (data["scheduledDate"] as? Timestamp)?.dateValue() ?? Date(),
+            items: items,
+            status: TripStatus(rawValue: data["status"] as? String ?? "planned") ?? .planned,
+            createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+            participants: data["participants"] as? [String] ?? [],
+            notes: data["notes"] as? String
+        )
+    }
+    
     func getGroupTrips(groupId: String) async throws -> [Trip] {
         let snapshot = try await firestore.collection("trips")
             .whereField("groupId", isEqualTo: groupId)
             .order(by: "scheduledDate", descending: false)
             .getDocuments()
         
-        return snapshot.documents.compactMap { doc in
-            let data = doc.data()
-            
-            let items = (data["items"] as? [[String: Any]] ?? []).compactMap { itemData in
-                TripItem(
-                    id: itemData["id"] as? String ?? UUID().uuidString,
-                    name: itemData["name"] as? String ?? "",
-                    quantityAvailable: itemData["quantityAvailable"] as? Int ?? 1,
-                    estimatedPrice: itemData["estimatedPrice"] as? Double ?? 0.0,
-                    category: ItemCategory(rawValue: itemData["category"] as? String ?? "grocery") ?? .grocery,
-                    notes: itemData["notes"] as? String
-                )
-            }
-            
-            return Trip(
-                id: doc.documentID,
-                groupId: data["groupId"] as? String ?? "",
-                shopperId: data["shopperId"] as? String ?? "",
-                store: Store(rawValue: data["store"] as? String ?? "costco") ?? .costco,
-                scheduledDate: (data["scheduledDate"] as? Timestamp)?.dateValue() ?? Date(),
-                items: items,
-                status: TripStatus(rawValue: data["status"] as? String ?? "planned") ?? .planned,
-                createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                participants: data["participants"] as? [String] ?? [],
-                notes: data["notes"] as? String
-            )
-        }
+        return snapshot.documents.compactMap { parseTrip(from: $0) }
     }
 }
 
