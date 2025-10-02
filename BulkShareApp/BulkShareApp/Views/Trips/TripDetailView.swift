@@ -17,18 +17,28 @@ import SwiftUI
 
 struct TripDetailView: View {
     let trip: Trip
-    @State private var selectedItems: Set<String> = []
+    @State private var selectedItems: [String: Int] = [:] // itemId: quantity
     @State private var showingJoinAlert = false
     @State private var showingSuccessAlert = false
     @State private var isLoading = false
+    @State private var claims: [ItemClaim] = []
+    @State private var transactions: [Transaction] = []
     
     private var totalCost: Double {
-        let selectedTripItems = trip.items.filter { selectedItems.contains($0.id) }
-        return selectedTripItems.reduce(0) { $0 + $1.estimatedPrice }
+        return selectedItems.reduce(0) { total, selection in
+            if let item = trip.items.first(where: { $0.id == selection.key }) {
+                return total + (item.estimatedPrice * Double(selection.value))
+            }
+            return total
+        }
     }
     
     private var hasSelectedItems: Bool {
         !selectedItems.isEmpty
+    }
+    
+    private var totalSelectedItems: Int {
+        selectedItems.values.reduce(0, +)
     }
     
     var body: some View {
@@ -40,7 +50,8 @@ struct TripDetailView: View {
                 // Available Items
                 AvailableItemsSection(
                     items: trip.items,
-                    selectedItems: $selectedItems
+                    selectedItems: $selectedItems,
+                    claims: claims
                 )
                 
                 // Participants
@@ -50,7 +61,7 @@ struct TripDetailView: View {
                 if hasSelectedItems {
                     JoinTripSection(
                         totalCost: totalCost,
-                        selectedCount: selectedItems.count,
+                        selectedCount: totalSelectedItems,
                         isLoading: isLoading,
                         onJoin: {
                             showingJoinAlert = true
@@ -78,23 +89,80 @@ struct TripDetailView: View {
                 handleJoinTrip()
             }
         } message: {
-            Text("Join this trip for $\(totalCost, specifier: "%.2f") (\(selectedItems.count) items)?")
+            Text("Join this trip for $\(totalCost, specifier: "%.2f") (\(totalSelectedItems) items)?")
         }
         .alert("Trip Joined!", isPresented: $showingSuccessAlert) {
             Button("OK", role: .cancel) { }
         } message: {
             Text("You've successfully joined the trip. You'll be notified when it's time for pickup.")
         }
+        .onAppear {
+            loadTripData()
+        }
     }
     
     private func handleJoinTrip() {
+        guard let currentUser = FirebaseManager.shared.currentUser else { return }
+        
         isLoading = true
         
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            isLoading = false
-            showingSuccessAlert = true
-            selectedItems.removeAll()
+        Task {
+            do {
+                // Create claims for selected items
+                var newClaims: [ItemClaim] = []
+                for (itemId, quantity) in selectedItems {
+                    let claim = ItemClaim(
+                        tripId: trip.id,
+                        itemId: itemId,
+                        claimerUserId: currentUser.id,
+                        quantityClaimed: quantity
+                    )
+                    newClaims.append(claim)
+                }
+                
+                // Save claims to Firebase
+                try await FirebaseManager.shared.createClaims(newClaims)
+                
+                // Create transaction for payment tracking
+                let transaction = Transaction(
+                    tripId: trip.id,
+                    fromUserId: currentUser.id,
+                    toUserId: trip.shopperId,
+                    amount: totalCost,
+                    itemClaimIds: newClaims.map { $0.id }
+                )
+                
+                try await FirebaseManager.shared.createTransaction(transaction)
+                
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.showingSuccessAlert = true
+                    self.selectedItems.removeAll()
+                    self.loadTripData() // Refresh claims
+                }
+                
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    print("Error joining trip: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func loadTripData() {
+        Task {
+            do {
+                let tripClaims = try await FirebaseManager.shared.getTripClaims(tripId: trip.id)
+                let tripTransactions = try await FirebaseManager.shared.getTripTransactions(tripId: trip.id)
+                
+                DispatchQueue.main.async {
+                    self.claims = tripClaims
+                    self.transactions = tripTransactions
+                }
+            } catch {
+                print("Error loading trip data: \(error)")
+            }
         }
     }
 }
@@ -211,7 +279,8 @@ struct TripDetailHeader: View {
 
 struct AvailableItemsSection: View {
     let items: [TripItem]
-    @Binding var selectedItems: Set<String>
+    @Binding var selectedItems: [String: Int]
+    let claims: [ItemClaim]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -222,16 +291,19 @@ struct AvailableItemsSection: View {
             
             VStack(spacing: 12) {
                 ForEach(items) { item in
-                    SelectableItemCard(
+                    let remainingQty = item.remainingQuantity(claims: claims)
+                    QuantitySelectableItemCard(
                         item: item,
-                        isSelected: selectedItems.contains(item.id)
-                    ) {
-                        if selectedItems.contains(item.id) {
-                            selectedItems.remove(item.id)
-                        } else {
-                            selectedItems.insert(item.id)
+                        remainingQuantity: remainingQty,
+                        selectedQuantity: selectedItems[item.id] ?? 0,
+                        onQuantityChange: { quantity in
+                            if quantity > 0 {
+                                selectedItems[item.id] = quantity
+                            } else {
+                                selectedItems.removeValue(forKey: item.id)
+                            }
                         }
-                    }
+                    )
                 }
             }
         }
@@ -242,19 +314,15 @@ struct AvailableItemsSection: View {
     }
 }
 
-struct SelectableItemCard: View {
+struct QuantitySelectableItemCard: View {
     let item: TripItem
-    let isSelected: Bool
-    let action: () -> Void
+    let remainingQuantity: Int
+    let selectedQuantity: Int
+    let onQuantityChange: (Int) -> Void
     
     var body: some View {
-        Button(action: action) {
+        VStack(spacing: 12) {
             HStack {
-                // Selection indicator
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? .bulkSharePrimary : .bulkShareTextLight)
-                    .font(.title3)
-                
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.name)
                         .font(.subheadline)
@@ -267,10 +335,16 @@ struct SelectableItemCard: View {
                             .font(.caption)
                             .foregroundColor(.bulkShareTextMedium)
                         
-                        if item.quantityAvailable > 1 {
-                            Text("• \(item.quantityAvailable) available")
+                        Spacer()
+                        
+                        if remainingQuantity > 0 {
+                            Text("\(remainingQuantity) remaining")
                                 .font(.caption)
-                                .foregroundColor(.bulkShareInfo)
+                                .foregroundColor(.bulkShareSuccess)
+                        } else {
+                            Text("Sold out")
+                                .font(.caption)
+                                .foregroundColor(.red)
                         }
                     }
                 }
@@ -282,15 +356,53 @@ struct SelectableItemCard: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.bulkSharePrimary)
             }
-            .padding()
-            .background(isSelected ? Color.bulkSharePrimary.opacity(0.1) : Color.bulkShareBackground)
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.bulkSharePrimary : Color.clear, lineWidth: 1)
-            )
+            
+            // Quantity selector
+            if remainingQuantity > 0 {
+                HStack {
+                    Text("Quantity:")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextMedium)
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            if selectedQuantity > 0 {
+                                onQuantityChange(selectedQuantity - 1)
+                            }
+                        }) {
+                            Image(systemName: "minus.circle")
+                                .foregroundColor(selectedQuantity > 0 ? .bulkSharePrimary : .gray)
+                        }
+                        .disabled(selectedQuantity <= 0)
+                        
+                        Text("\(selectedQuantity)")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .frame(minWidth: 30)
+                        
+                        Button(action: {
+                            if selectedQuantity < remainingQuantity {
+                                onQuantityChange(selectedQuantity + 1)
+                            }
+                        }) {
+                            Image(systemName: "plus.circle")
+                                .foregroundColor(selectedQuantity < remainingQuantity ? .bulkSharePrimary : .gray)
+                        }
+                        .disabled(selectedQuantity >= remainingQuantity)
+                    }
+                }
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding()
+        .background(selectedQuantity > 0 ? Color.bulkSharePrimary.opacity(0.1) : Color.bulkShareBackground)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(selectedQuantity > 0 ? Color.bulkSharePrimary : Color.clear, lineWidth: 1)
+        )
+        .opacity(remainingQuantity > 0 ? 1.0 : 0.6)
     }
 }
 

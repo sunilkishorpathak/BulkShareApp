@@ -50,6 +50,31 @@ class NotificationManager: ObservableObject {
         notificationListener = nil
     }
     
+    func createTripNotification(
+        tripId: String,
+        trip: Trip,
+        creatorUserId: String,
+        creatorName: String,
+        groupMembers: [String]
+    ) async throws {
+        // Send notification to all group members except the creator
+        let recipients = groupMembers.filter { $0 != creatorUserId }
+        
+        for recipientUserId in recipients {
+            let notification = Notification(
+                type: .tripInvitation,
+                title: "New Shopping Trip",
+                message: "\(creatorName) created a trip to \(trip.store.displayName) with \(trip.items.count) items available",
+                recipientUserId: recipientUserId,
+                senderUserId: creatorUserId,
+                senderName: creatorName,
+                relatedId: tripId
+            )
+            
+            try await saveNotification(notification)
+        }
+    }
+    
     func createGroupInvitationNotification(
         groupId: String,
         groupName: String,

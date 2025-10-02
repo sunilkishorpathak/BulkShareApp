@@ -10,6 +10,7 @@ import SwiftUI
 struct EmailDebugView: View {
     @State private var emailLogs: [EmailLog] = []
     @State private var isMonitoring = false
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationView {
@@ -71,7 +72,7 @@ struct EmailDebugView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
-                        // Dismiss
+                        dismiss()
                     }
                 }
             }

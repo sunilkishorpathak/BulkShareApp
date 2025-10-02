@@ -16,6 +16,8 @@ struct UserProfileView: View {
     @State private var errorMessage = ""
     @State private var isDeleting = false
     @State private var showingEmailDebug = false
+    @State private var showingPrivacyPolicy = false
+    @State private var showingTermsOfService = false
     
     // Computed properties for safe data access
     private var userEmail: String {
@@ -87,21 +89,14 @@ struct UserProfileView: View {
                                     icon: "doc.text",
                                     title: "Privacy Policy",
                                     value: "",
-                                    action: { /* Navigate to privacy policy */ }
+                                    action: { showingPrivacyPolicy = true }
                                 )
                                 
                                 ProfileSettingsRow(
                                     icon: "doc.plaintext",
                                     title: "Terms of Service",
                                     value: "",
-                                    action: { /* Navigate to terms */ }
-                                )
-                                
-                                ProfileSettingsRow(
-                                    icon: "square.and.arrow.down",
-                                    title: "Export My Data",
-                                    value: "",
-                                    action: { /* Export user data */ }
+                                    action: { showingTermsOfService = true }
                                 )
                                 
                                 ProfileSettingsRow(
@@ -177,6 +172,12 @@ struct UserProfileView: View {
             }
             .sheet(isPresented: $showingEmailDebug) {
                 EmailDebugView()
+            }
+            .sheet(isPresented: $showingPrivacyPolicy) {
+                PrivacyPolicyView()
+            }
+            .sheet(isPresented: $showingTermsOfService) {
+                TermsOfServiceView()
             }
         }
     }

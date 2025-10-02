@@ -13,6 +13,8 @@ struct NotificationsView: View {
     @State private var showingAlert = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
+    @State private var selectedTrip: Trip?
+    @State private var showingTripDetail = false
     
     var body: some View {
         NavigationView {
@@ -29,7 +31,8 @@ struct NotificationsView: View {
                                     notification: notification,
                                     onAccept: { handleNotificationResponse(notification, .accepted) },
                                     onReject: { handleNotificationResponse(notification, .rejected) },
-                                    onMarkAsRead: { markAsRead(notification) }
+                                    onMarkAsRead: { markAsRead(notification) },
+                                    onTap: { handleNotificationTap(notification) }
                                 )
                             }
                         }
@@ -56,6 +59,20 @@ struct NotificationsView: View {
             }
             .onAppear {
                 startListeningForNotifications()
+            }
+            .sheet(isPresented: $showingTripDetail) {
+                if let trip = selectedTrip {
+                    NavigationView {
+                        TripDetailView(trip: trip)
+                            .toolbar {
+                                ToolbarItem(placement: .navigationBarTrailing) {
+                                    Button("Done") {
+                                        showingTripDetail = false
+                                    }
+                                }
+                            }
+                    }
+                }
             }
         }
     }
@@ -113,6 +130,35 @@ struct NotificationsView: View {
         }
     }
     
+    private func handleNotificationTap(_ notification: Notification) {
+        // Mark notification as read
+        markAsRead(notification)
+        
+        // If it's a trip notification, load and show trip details
+        if notification.type == .tripInvitation || notification.type == .tripUpdate {
+            loadTripDetails(tripId: notification.relatedId)
+        }
+    }
+    
+    private func loadTripDetails(tripId: String) {
+        Task {
+            do {
+                let trip = try await FirebaseManager.shared.getTrip(tripId: tripId)
+                DispatchQueue.main.async {
+                    self.selectedTrip = trip
+                    self.showingTripDetail = true
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.showAlert(
+                        title: "Error",
+                        message: "Could not load trip details: \(error.localizedDescription)"
+                    )
+                }
+            }
+        }
+    }
+    
     private func showAlert(title: String, message: String) {
         alertTitle = title
         alertMessage = message
@@ -125,91 +171,100 @@ struct NotificationCard: View {
     let onAccept: () -> Void
     let onReject: () -> Void
     let onMarkAsRead: () -> Void
+    let onTap: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack {
-                Image(systemName: notification.type.icon)
-                    .foregroundColor(Color(notification.type.color))
-                    .font(.title2)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(notification.title)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.bulkShareTextDark)
-                    
-                    Text(notification.message)
-                        .font(.subheadline)
-                        .foregroundColor(.bulkShareTextMedium)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(timeAgoString(from: notification.createdAt))
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextLight)
-                    
-                    if !notification.isRead {
-                        Circle()
-                            .fill(Color.bulkSharePrimary)
-                            .frame(width: 8, height: 8)
-                    }
-                }
+        Button(action: {
+            // Only trigger tap for trip notifications
+            if notification.type == .tripInvitation || notification.type == .tripUpdate {
+                onTap()
             }
-            
-            // Status or Action Buttons
-            if notification.status == .pending && notification.type == .groupInvitation {
-                HStack(spacing: 12) {
-                    Button(action: onReject) {
-                        HStack {
-                            Image(systemName: "xmark")
-                            Text("Decline")
-                        }
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-                    
-                    Button(action: onAccept) {
-                        HStack {
-                            Image(systemName: "checkmark")
-                            Text("Accept")
-                        }
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .background(Color.bulkSharePrimary)
-                        .cornerRadius(8)
-                    }
-                }
-            } else {
+        }) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Header
                 HStack {
-                    Text("Status: \(notification.status.displayText)")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextMedium)
+                    Image(systemName: notification.type.icon)
+                        .foregroundColor(Color(notification.type.color))
+                        .font(.title2)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(notification.title)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.bulkShareTextDark)
+                        
+                        Text(notification.message)
+                            .font(.subheadline)
+                            .foregroundColor(.bulkShareTextMedium)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     
                     Spacer()
                     
-                    if !notification.isRead {
-                        Button("Mark as read") {
-                            onMarkAsRead()
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(timeAgoString(from: notification.createdAt))
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextLight)
+                        
+                        if !notification.isRead {
+                            Circle()
+                                .fill(Color.bulkSharePrimary)
+                                .frame(width: 8, height: 8)
                         }
-                        .font(.caption)
-                        .foregroundColor(.bulkSharePrimary)
+                    }
+                }
+                
+                // Status or Action Buttons
+                if notification.status == .pending && notification.type == .groupInvitation {
+                    HStack(spacing: 12) {
+                        Button(action: onReject) {
+                            HStack {
+                                Image(systemName: "xmark")
+                                Text("Decline")
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                        
+                        Button(action: onAccept) {
+                            HStack {
+                                Image(systemName: "checkmark")
+                                Text("Accept")
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background(Color.bulkSharePrimary)
+                            .cornerRadius(8)
+                        }
+                    }
+                } else {
+                    HStack {
+                        Text("Status: \(notification.status.displayText)")
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextMedium)
+                        
+                        Spacer()
+                        
+                        if !notification.isRead {
+                            Button("Mark as read") {
+                                onMarkAsRead()
+                            }
+                            .font(.caption)
+                            .foregroundColor(.bulkSharePrimary)
+                        }
                     }
                 }
             }
         }
+        .buttonStyle(PlainButtonStyle())
         .padding()
         .background(notification.isRead ? Color.white : Color.bulkSharePrimary.opacity(0.05))
         .cornerRadius(12)

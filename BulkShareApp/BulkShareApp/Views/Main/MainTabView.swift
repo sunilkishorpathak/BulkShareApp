@@ -40,6 +40,13 @@ struct MainTabView: View {
                     Text("Notifications")
                 }
             
+            // Transactions Tab
+            TransactionsView()
+                .tabItem {
+                    Image(systemName: "creditcard")
+                    Text("Transactions")
+                }
+            
             // Profile Tab
             UserProfileView()
                 .tabItem {

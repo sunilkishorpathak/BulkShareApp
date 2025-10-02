@@ -88,6 +88,18 @@ struct TripItem: Identifiable, Codable {
         self.category = category
         self.notes = notes
     }
+    
+    // Calculate remaining quantity after claims
+    func remainingQuantity(claims: [ItemClaim]) -> Int {
+        let claimedQuantity = claims
+            .filter { $0.itemId == self.id && $0.status != .cancelled }
+            .reduce(0) { $0 + $1.quantityClaimed }
+        return max(0, quantityAvailable - claimedQuantity)
+    }
+    
+    var isAvailable: Bool {
+        return quantityAvailable > 0
+    }
 }
 
 enum TripStatus: String, Codable, CaseIterable {
