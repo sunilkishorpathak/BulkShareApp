@@ -25,22 +25,25 @@ class NotificationManager: ObservableObject {
     // MARK: - Public Methods
     
     func startListening(for userId: String) {
+        print("🎧 NotificationManager: Starting listener for userId: \(userId)")
         stopListening()
         
         notificationListener = firestore.collection("notifications")
             .whereField("recipientUserId", isEqualTo: userId)
-            .order(by: "createdAt", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let documents = snapshot?.documents else {
-                    print("Error fetching notifications: \(error?.localizedDescription ?? "Unknown error")")
+                    print("❌ Error fetching notifications: \(error?.localizedDescription ?? "Unknown error")")
                     return
                 }
                 
+                print("📬 Received \(documents.count) notification documents for user \(userId)")
                 let notifications = documents.compactMap { self?.parseNotification(from: $0) }
+                print("📋 Parsed \(notifications.count) valid notifications")
                 
                 DispatchQueue.main.async {
                     self?.notifications = notifications
                     self?.updateUnreadCount()
+                    print("🔄 Updated notifications list with \(notifications.count) items")
                 }
             }
     }
@@ -82,18 +85,23 @@ class NotificationManager: ObservableObject {
         inviterName: String,
         recipientEmail: String
     ) async throws {
+        print("🔍 Looking for user with email: \(recipientEmail)")
+        
         // First, find the user by email (if they exist)
         let userSnapshot = try await firestore.collection("users")
             .whereField("email", isEqualTo: recipientEmail)
             .getDocuments()
         
+        print("📊 Found \(userSnapshot.documents.count) users with email \(recipientEmail)")
+        
         guard let userDocument = userSnapshot.documents.first else {
             // User doesn't exist yet, they'll get the notification when they sign up
-            print("User with email \(recipientEmail) not found - notification will be created when they sign up")
+            print("❌ User with email \(recipientEmail) not found - notification will be created when they sign up")
             return
         }
         
         let recipientUserId = userDocument.documentID
+        print("✅ Found user \(recipientUserId) for email \(recipientEmail)")
         
         let notification = Notification(
             type: .groupInvitation,
@@ -106,6 +114,7 @@ class NotificationManager: ObservableObject {
         )
         
         try await saveNotification(notification)
+        print("🔔 Group invitation notification created for user \(recipientUserId)")
     }
     
     func respondToGroupInvitation(

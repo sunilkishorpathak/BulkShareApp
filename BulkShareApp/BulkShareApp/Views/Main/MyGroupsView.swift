@@ -97,18 +97,30 @@ struct MyGroupsView: View {
             .onAppear {
                 Task { await loadUserGroups() }
             }
+            .onChange(of: firebaseManager.currentUser) { _ in
+                Task { await loadUserGroups() }
+            }
         }
     }
     
     @MainActor
     private func loadUserGroups() async {
+        guard firebaseManager.currentUser != nil else {
+            print("⚠️ MyGroupsView: No current user available, skipping group load")
+            isLoading = false
+            return
+        }
+        
+        print("🏠 MyGroupsView: Loading groups for user \(firebaseManager.currentUser?.email ?? "unknown")")
         isLoading = true
         
         do {
             let groups = try await firebaseManager.getUserGroups()
+            print("✅ MyGroupsView: Loaded \(groups.count) groups")
             self.userGroups = groups
             self.isLoading = false
         } catch {
+            print("❌ MyGroupsView: Failed to load groups: \(error)")
             self.isLoading = false
             self.errorMessage = "Failed to load groups: \(error.localizedDescription)"
             self.showingError = true

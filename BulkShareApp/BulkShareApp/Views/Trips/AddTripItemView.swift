@@ -18,7 +18,6 @@ import SwiftUI
 struct AddTripItemView: View {
     @State private var itemName: String = ""
     @State private var quantity: Int = 1
-    @State private var estimatedPrice: String = ""
     @State private var selectedCategory: ItemCategory = .grocery
     @State private var notes: String = ""
     @Environment(\.dismiss) private var dismiss
@@ -85,55 +84,39 @@ struct AddTripItemView: View {
                             }
                         }
                         
-                        HStack(spacing: 16) {
-                            // Quantity
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Quantity Available")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.bulkShareTextMedium)
-                                
-                                HStack {
-                                    Button(action: { 
-                                        if quantity > 1 { quantity -= 1 }
+                        // Quantity
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Quantity Available (0-20)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.bulkShareTextMedium)
+                            
+                            Menu {
+                                ForEach(0...20, id: \.self) { count in
+                                    Button(action: {
+                                        quantity = count
                                     }) {
-                                        Image(systemName: "minus.circle.fill")
-                                            .foregroundColor(.bulkSharePrimary)
-                                            .font(.title2)
+                                        HStack {
+                                            Text("\(count)")
+                                            if quantity == count {
+                                                Spacer()
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
                                     }
-                                    
+                                }
+                            } label: {
+                                HStack {
                                     Text("\(quantity)")
                                         .font(.title3)
                                         .fontWeight(.semibold)
-                                        .frame(minWidth: 40)
+                                        .foregroundColor(.bulkShareTextDark)
                                     
-                                    Button(action: { quantity += 1 }) {
-                                        Image(systemName: "plus.circle.fill")
-                                            .foregroundColor(.bulkSharePrimary)
-                                            .font(.title2)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.bulkShareBackground)
-                                .cornerRadius(12)
-                            }
-                            
-                            // Price
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Price Each")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.bulkShareTextMedium)
-                                
-                                HStack {
-                                    Text("$")
-                                        .font(.title3)
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption)
                                         .foregroundColor(.bulkShareTextMedium)
-                                    
-                                    TextField("0.00", text: $estimatedPrice)
-                                        .keyboardType(.decimalPad)
-                                        .textFieldStyle(PlainTextFieldStyle())
                                 }
                                 .padding()
                                 .background(Color.bulkShareBackground)
@@ -191,19 +174,14 @@ struct AddTripItemView: View {
     }
     
     private var isFormValid: Bool {
-        return !itemName.isEmpty && 
-               quantity > 0 && 
-               !estimatedPrice.isEmpty &&
-               Double(estimatedPrice) != nil
+        return !itemName.isEmpty && quantity > 0
     }
     
     private func handleAddItem() {
-        guard let price = Double(estimatedPrice) else { return }
-        
         let item = TripItem(
             name: itemName,
             quantityAvailable: quantity,
-            estimatedPrice: price,
+            estimatedPrice: 0.0, // Default price to 0 since we removed price input
             category: selectedCategory,
             notes: notes.isEmpty ? nil : notes
         )

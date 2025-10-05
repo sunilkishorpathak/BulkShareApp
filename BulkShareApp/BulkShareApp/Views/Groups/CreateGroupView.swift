@@ -273,6 +273,25 @@ struct CreateGroupView: View {
                     )
                 }
                 
+                // Send in-app notifications to existing users
+                print("🚀 Sending notifications to \(validEmails.count) emails: \(validEmails)")
+                for email in validEmails {
+                    do {
+                        print("📱 Creating notification for email: \(email)")
+                        try await NotificationManager.shared.createGroupInvitationNotification(
+                            groupId: groupId,
+                            groupName: groupName,
+                            inviterUserId: currentUser.id,
+                            inviterName: currentUser.name,
+                            recipientEmail: email
+                        )
+                        print("✅ Successfully created notification for \(email)")
+                    } catch {
+                        print("❌ Failed to create notification for \(email): \(error)")
+                        // Continue with other notifications even if one fails
+                    }
+                }
+                
                 DispatchQueue.main.async {
                     self.isLoading = false
                     
@@ -282,7 +301,7 @@ struct CreateGroupView: View {
                     } else {
                         switch emailResult {
                         case .success:
-                            message = "Group \"\(self.groupName)\" has been created and invitations sent to \(validEmails.count) members."
+                            message = "Group \"\(self.groupName)\" has been created and invitations sent to \(validEmails.count) members. Existing app users will receive notifications."
                         case .failure(let error):
                             message = "Group \"\(self.groupName)\" has been created, but failed to send some invitations: \(error.localizedDescription)"
                         case .none:
