@@ -14,14 +14,23 @@ struct NotificationsView: View {
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var selectedTrip: Trip?
-    @State private var showingTripDetail = false
+    @State private var isLoadingTrip = false
     
     var body: some View {
         NavigationView {
             ZStack {
                 Color.bulkShareBackground.ignoresSafeArea()
                 
-                if notificationManager.notifications.isEmpty {
+                if isLoadingTrip {
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Loading trip details...")
+                            .font(.subheadline)
+                            .foregroundColor(.bulkShareTextMedium)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if notificationManager.notifications.isEmpty {
                     EmptyNotificationsView()
                 } else {
                     ScrollView {
@@ -60,18 +69,16 @@ struct NotificationsView: View {
             .onAppear {
                 startListeningForNotifications()
             }
-            .sheet(isPresented: $showingTripDetail) {
-                if let trip = selectedTrip {
-                    NavigationView {
-                        TripDetailView(trip: trip)
-                            .toolbar {
-                                ToolbarItem(placement: .navigationBarTrailing) {
-                                    Button("Done") {
-                                        showingTripDetail = false
-                                    }
+            .sheet(item: $selectedTrip) { trip in
+                NavigationView {
+                    TripDetailView(trip: trip)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Done") {
+                                    selectedTrip = nil
                                 }
                             }
-                    }
+                        }
                 }
             }
         }
@@ -145,15 +152,22 @@ struct NotificationsView: View {
     }
     
     private func loadTripDetails(tripId: String) {
+        isLoadingTrip = true
+        print("🔍 Loading trip details for tripId: \(tripId)")
+        
         Task {
             do {
                 let trip = try await FirebaseManager.shared.getTrip(tripId: tripId)
+                print("✅ Successfully loaded trip: \(trip.id) - \(trip.store.displayName)")
                 DispatchQueue.main.async {
+                    self.isLoadingTrip = false
                     self.selectedTrip = trip
-                    self.showingTripDetail = true
+                    print("🎯 Set selectedTrip, should trigger sheet")
                 }
             } catch {
+                print("❌ Error loading trip: \(error.localizedDescription)")
                 DispatchQueue.main.async {
+                    self.isLoadingTrip = false
                     self.showAlert(
                         title: "Error",
                         message: "Could not load trip details: \(error.localizedDescription)"

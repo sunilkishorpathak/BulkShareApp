@@ -35,14 +35,25 @@ struct ItemClaim: Identifiable, Codable {
 
 enum ClaimStatus: String, Codable, CaseIterable {
     case pending = "pending"
-    case confirmed = "confirmed"
+    case accepted = "accepted"
+    case rejected = "rejected"
     case cancelled = "cancelled"
     
     var displayName: String {
         switch self {
-        case .pending: return "Pending"
-        case .confirmed: return "Confirmed"
+        case .pending: return "Pending Approval"
+        case .accepted: return "Accepted"
+        case .rejected: return "Rejected"
         case .cancelled: return "Cancelled"
+        }
+    }
+    
+    var color: String {
+        switch self {
+        case .pending: return "orange"
+        case .accepted: return "green"
+        case .rejected: return "red"
+        case .cancelled: return "gray"
         }
     }
 }

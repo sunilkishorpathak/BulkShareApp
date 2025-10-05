@@ -557,6 +557,104 @@ class FirebaseManager: ObservableObject {
         }
     }
     
+    func updateClaimStatus(claimId: String, status: ClaimStatus) async throws {
+        try await firestore.collection("claims").document(claimId)
+            .updateData(["status": status.rawValue])
+    }
+    
+    // MARK: - Item Request Management
+    
+    func createItemRequest(_ request: ItemRequest) async throws {
+        let requestData: [String: Any] = [
+            "id": request.id,
+            "tripId": request.tripId,
+            "requesterUserId": request.requesterUserId,
+            "itemName": request.itemName,
+            "quantityRequested": request.quantityRequested,
+            "category": request.category.rawValue,
+            "notes": request.notes as Any,
+            "requestedAt": Timestamp(date: request.requestedAt),
+            "status": request.status.rawValue
+        ]
+        
+        try await firestore.collection("itemRequests")
+            .document(request.id)
+            .setData(requestData)
+    }
+    
+    func getTripItemRequests(tripId: String) async throws -> [ItemRequest] {
+        let snapshot = try await firestore.collection("itemRequests")
+            .whereField("tripId", isEqualTo: tripId)
+            .getDocuments()
+        
+        return snapshot.documents.compactMap { document in
+            let data = document.data()
+            guard let category = ItemCategory(rawValue: data["category"] as? String ?? "") else {
+                return nil
+            }
+            
+            return ItemRequest(
+                id: data["id"] as? String ?? document.documentID,
+                tripId: data["tripId"] as? String ?? "",
+                requesterUserId: data["requesterUserId"] as? String ?? "",
+                itemName: data["itemName"] as? String ?? "",
+                quantityRequested: data["quantityRequested"] as? Int ?? 0,
+                category: category,
+                notes: data["notes"] as? String,
+                requestedAt: (data["requestedAt"] as? Timestamp)?.dateValue() ?? Date(),
+                status: ItemRequestStatus(rawValue: data["status"] as? String ?? "pending") ?? .pending
+            )
+        }
+    }
+    
+    func updateItemRequestStatus(requestId: String, status: ItemRequestStatus) async throws {
+        try await firestore.collection("itemRequests").document(requestId)
+            .updateData(["status": status.rawValue])
+    }
+    
+    func approveItemRequestAndAddToTrip(requestId: String, tripId: String) async throws {
+        // First get the request details
+        let requestDoc = try await firestore.collection("itemRequests").document(requestId).getDocument()
+        guard let requestData = requestDoc.data(),
+              let itemName = requestData["itemName"] as? String,
+              let quantityRequested = requestData["quantityRequested"] as? Int,
+              let categoryRaw = requestData["category"] as? String,
+              let category = ItemCategory(rawValue: categoryRaw) else {
+            throw NSError(domain: "FirebaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid request data"])
+        }
+        
+        // Create new trip item
+        let newTripItem = TripItem(
+            name: itemName,
+            quantityAvailable: quantityRequested,
+            estimatedPrice: 0.0,
+            category: category,
+            notes: requestData["notes"] as? String
+        )
+        
+        // Update trip with new item and request status in a batch
+        let batch = firestore.batch()
+        
+        // Update request status
+        let requestRef = firestore.collection("itemRequests").document(requestId)
+        batch.updateData(["status": ItemRequestStatus.approved.rawValue], forDocument: requestRef)
+        
+        // Add item to trip
+        let tripRef = firestore.collection("trips").document(tripId)
+        batch.updateData([
+            "items": FieldValue.arrayUnion([[
+                "id": newTripItem.id,
+                "name": newTripItem.name,
+                "quantityAvailable": newTripItem.quantityAvailable,
+                "estimatedPrice": newTripItem.estimatedPrice,
+                "category": newTripItem.category.rawValue,
+                "notes": newTripItem.notes as Any
+            ]])
+        ], forDocument: tripRef)
+        
+        try await batch.commit()
+    }
+    
     // MARK: - Transaction Management
     
     func createTransaction(_ transaction: Transaction) async throws {

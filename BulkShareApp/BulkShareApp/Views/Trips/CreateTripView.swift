@@ -365,11 +365,6 @@ struct TripItemCard: View {
             Spacer()
             
             VStack(alignment: .trailing, spacing: 4) {
-                Text("$\(item.estimatedPrice, specifier: "%.2f")")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.bulkSharePrimary)
-                
                 Button(action: onRemove) {
                     Image(systemName: "trash.circle.fill")
                         .foregroundColor(.red)

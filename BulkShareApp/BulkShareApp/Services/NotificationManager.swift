@@ -117,6 +117,72 @@ class NotificationManager: ObservableObject {
         print("🔔 Group invitation notification created for user \(recipientUserId)")
     }
     
+    func createClaimNotification(
+        tripId: String,
+        tripOrganizerId: String,
+        claimerUserId: String,
+        claimerName: String,
+        itemsCount: Int,
+        tripStore: String
+    ) async throws {
+        let notification = Notification(
+            type: .tripUpdate,
+            title: "Item Request Received",
+            message: "\(claimerName) requested \(itemsCount) items from your \(tripStore) trip",
+            recipientUserId: tripOrganizerId,
+            senderUserId: claimerUserId,
+            senderName: claimerName,
+            relatedId: tripId
+        )
+        
+        try await saveNotification(notification)
+        print("🔔 Claim notification created for trip organizer \(tripOrganizerId)")
+    }
+    
+    func createItemRequestNotification(
+        tripId: String,
+        tripOrganizerId: String,
+        requesterUserId: String,
+        requesterName: String,
+        itemName: String,
+        quantity: Int
+    ) async throws {
+        let notification = Notification(
+            type: .tripUpdate,
+            title: "New Item Request",
+            message: "\(requesterName) requested \(quantity) x \(itemName) to be added to your trip",
+            recipientUserId: tripOrganizerId,
+            senderUserId: requesterUserId,
+            senderName: requesterName,
+            relatedId: tripId
+        )
+        
+        try await saveNotification(notification)
+        print("🔔 Item request notification created for trip organizer \(tripOrganizerId)")
+    }
+    
+    func createItemApprovalNotification(
+        tripId: String,
+        requesterUserId: String,
+        organizerUserId: String,
+        organizerName: String,
+        itemName: String,
+        quantity: Int
+    ) async throws {
+        let notification = Notification(
+            type: .tripUpdate,
+            title: "Item Request Approved!",
+            message: "\(organizerName) approved your request for \(quantity) x \(itemName). It's now available in the trip!",
+            recipientUserId: requesterUserId,
+            senderUserId: organizerUserId,
+            senderName: organizerName,
+            relatedId: tripId
+        )
+        
+        try await saveNotification(notification)
+        print("🔔 Item approval notification created for requester \(requesterUserId)")
+    }
+    
     func respondToGroupInvitation(
         notificationId: String,
         response: NotificationStatus,

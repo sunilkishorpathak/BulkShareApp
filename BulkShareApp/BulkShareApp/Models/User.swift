@@ -55,6 +55,17 @@ struct User: Identifiable, Codable, Equatable {
     var displayName: String {
         return name.isEmpty ? email : name
     }
+    
+    // MARK: - Equatable Implementation
+    static func == (lhs: User, rhs: User) -> Bool {
+        return lhs.id == rhs.id &&
+               lhs.name == rhs.name &&
+               lhs.email == rhs.email &&
+               lhs.paypalId == rhs.paypalId &&
+               lhs.profileImageURL == rhs.profileImageURL &&
+               lhs.isEmailVerified == rhs.isEmailVerified
+        // Note: Excluding createdAt from comparison as it shouldn't change
+    }
 }
 
 // MARK: - Sample Data
