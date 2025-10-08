@@ -204,12 +204,12 @@ struct TripDetailView: View {
                     tripStore: trip.store.displayName
                 )
                 
-                // Create transaction for payment tracking
+                // Create transaction for item tracking  
                 let transaction = Transaction(
                     tripId: trip.id,
                     fromUserId: currentUser.id,
                     toUserId: trip.shopperId,
-                    amount: totalCost,
+                    itemPoints: totalItemsRequested,
                     itemClaimIds: newClaims.map { $0.id }
                 )
                 
@@ -597,26 +597,61 @@ struct QuantitySelectableItemCard: View {
                         .disabled(selectedQuantity >= remainingQuantity)
                     }
                 }
-            } else if userClaim != nil {
+            } else if let claim = userClaim {
                 HStack {
-                    Text("Request submitted")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextMedium)
-                    
-                    Spacer()
-                    
-                    Text("Cannot modify while pending")
-                        .font(.caption)
-                        .foregroundColor(.orange)
+                    if claim.status == .pending {
+                        Text("Request submitted")
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextMedium)
+                        
+                        Spacer()
+                        
+                        Text("Cannot modify while pending")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    } else if claim.status == .accepted {
+                        Text("Request accepted")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                        
+                        Spacer()
+                        
+                        Text("\(claim.quantityClaimed) items confirmed")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.green)
+                    } else if claim.status == .rejected {
+                        Text("Request rejected")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        
+                        Spacer()
+                        
+                        Text("Contact organizer")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
                 }
             }
         }
         .padding()
-        .background(selectedQuantity > 0 ? Color.bulkSharePrimary.opacity(0.1) : Color.bulkShareBackground)
+        .background(
+            selectedQuantity > 0 ? Color.bulkSharePrimary.opacity(0.1) :
+            userClaim?.status == .accepted ? Color.green.opacity(0.1) :
+            userClaim?.status == .rejected ? Color.red.opacity(0.1) :
+            Color.bulkShareBackground
+        )
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(selectedQuantity > 0 ? Color.bulkSharePrimary : Color.clear, lineWidth: 1)
+                .stroke(
+                    selectedQuantity > 0 ? Color.bulkSharePrimary :
+                    userClaim?.status == .accepted ? Color.green :
+                    userClaim?.status == .rejected ? Color.red :
+                    userClaim?.status == .pending ? Color.orange :
+                    Color.clear,
+                    lineWidth: userClaim != nil ? 2 : (selectedQuantity > 0 ? 1 : 0)
+                )
         )
         .opacity(remainingQuantity > 0 ? 1.0 : 0.6)
     }

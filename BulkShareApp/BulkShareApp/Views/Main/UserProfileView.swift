@@ -18,16 +18,13 @@ struct UserProfileView: View {
     @State private var showingEmailDebug = false
     @State private var showingPrivacyPolicy = false
     @State private var showingTermsOfService = false
+    @State private var showingAcknowledgments = false
     
     // Computed properties for safe data access
     private var userEmail: String {
         return firebaseManager.currentUser?.email ?? 
                Auth.auth().currentUser?.email ?? 
                "No email available"
-    }
-    
-    private var userPaypalId: String {
-        return firebaseManager.currentUser?.paypalId ?? "Not set"
     }
     
     private var userEmailVerified: String {
@@ -69,13 +66,6 @@ struct UserProfileView: View {
                                 )
                                 
                                 ProfileSettingsRow(
-                                    icon: "creditcard",
-                                    title: "PayPal ID",
-                                    value: userPaypalId,
-                                    action: nil
-                                )
-                                
-                                ProfileSettingsRow(
                                     icon: "checkmark.shield",
                                     title: "Email Verified",
                                     value: userEmailVerified,
@@ -97,6 +87,13 @@ struct UserProfileView: View {
                                     title: "Terms of Service",
                                     value: "",
                                     action: { showingTermsOfService = true }
+                                )
+                                
+                                ProfileSettingsRow(
+                                    icon: "hand.thumbsup",
+                                    title: "Acknowledgments",
+                                    value: "",
+                                    action: { showingAcknowledgments = true }
                                 )
                                 
                                 ProfileSettingsRow(
@@ -125,12 +122,6 @@ struct UserProfileView: View {
                                     Text("Account created: \(user.createdAt.formatted(date: .abbreviated, time: .omitted))")
                                         .font(.caption)
                                         .foregroundColor(.bulkShareTextMedium)
-                                    
-                                    Text("User ID: \(user.id)")
-                                        .font(.caption2)
-                                        .foregroundColor(.bulkShareTextLight)
-                                        .padding(.horizontal)
-                                        .multilineTextAlignment(.center)
                                 } else {
                                     Text("Loading account information...")
                                         .font(.caption)
@@ -178,6 +169,9 @@ struct UserProfileView: View {
             }
             .sheet(isPresented: $showingTermsOfService) {
                 TermsOfServiceView()
+            }
+            .sheet(isPresented: $showingAcknowledgments) {
+                AcknowledgmentsView()
             }
         }
     }

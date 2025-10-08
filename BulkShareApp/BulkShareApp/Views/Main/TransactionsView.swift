@@ -51,7 +51,7 @@ struct TransactionsView: View {
                                     TransactionCard(
                                         transaction: transaction,
                                         currentUserId: FirebaseManager.shared.currentUser?.id ?? "",
-                                        onMarkAsPaid: { markAsPaid(transaction) }
+                                        onMarkAsSettled: { markAsSettled(transaction) }
                                     )
                                 }
                             }
@@ -106,16 +106,16 @@ struct TransactionsView: View {
         }
     }
     
-    private func markAsPaid(_ transaction: Transaction) {
+    private func markAsSettled(_ transaction: Transaction) {
         Task {
             do {
-                try await FirebaseManager.shared.markTransactionAsPaid(transaction.id)
+                try await FirebaseManager.shared.markTransactionAsSettled(transaction.id)
                 
                 DispatchQueue.main.async {
                     self.loadTransactions() // Refresh data
                     self.showAlert(
-                        title: "Payment Recorded",
-                        message: "Transaction marked as paid successfully."
+                        title: "Transaction Settled",
+                        message: "Transaction marked as settled successfully."
                     )
                 }
                 
@@ -123,7 +123,7 @@ struct TransactionsView: View {
                 DispatchQueue.main.async {
                     self.showAlert(
                         title: "Error",
-                        message: "Failed to update payment status: \(error.localizedDescription)"
+                        message: "Failed to update transaction status: \(error.localizedDescription)"
                     )
                 }
             }
@@ -143,14 +143,14 @@ struct BalanceSummaryCard: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack {
-                Text("💰")
+                Text("📦")
                     .font(.title2)
                     .frame(width: 40, height: 40)
                     .background(Color.bulkSharePrimary.opacity(0.1))
                     .cornerRadius(10)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Balance Summary")
+                    Text("Item Balance")
                         .font(.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.bulkShareTextDark)
@@ -164,13 +164,13 @@ struct BalanceSummaryCard: View {
             }
             
             HStack {
-                // Money Owed
+                // Items You Owe
                 VStack(spacing: 4) {
                     Text("You Owe")
                         .font(.caption)
                         .foregroundColor(.bulkShareTextMedium)
                     
-                    Text("$\(balance.totalOwed, specifier: "%.2f")")
+                    Text("\(balance.totalItemsOwed) items")
                         .font(.title3)
                         .fontWeight(.semibold)
                         .foregroundColor(.red)
@@ -180,13 +180,13 @@ struct BalanceSummaryCard: View {
                 .background(Color.red.opacity(0.1))
                 .cornerRadius(12)
                 
-                // Money Owed To You
+                // Items Owed To You
                 VStack(spacing: 4) {
                     Text("Owed to You")
                         .font(.caption)
                         .foregroundColor(.bulkShareTextMedium)
                     
-                    Text("$\(balance.totalOwedTo, specifier: "%.2f")")
+                    Text("\(balance.totalItemsOwedTo) items")
                         .font(.title3)
                         .fontWeight(.semibold)
                         .foregroundColor(.bulkShareSuccess)
@@ -207,7 +207,7 @@ struct BalanceSummaryCard: View {
 struct TransactionCard: View {
     let transaction: Transaction
     let currentUserId: String
-    let onMarkAsPaid: () -> Void
+    let onMarkAsSettled: () -> Void
     
     @State private var otherUserName: String = "Loading..."
     
@@ -237,7 +237,7 @@ struct TransactionCard: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("$\(transaction.amount, specifier: "%.2f")")
+                    Text("\(transaction.itemPoints) item\(transaction.itemPoints == 1 ? "" : "s")")
                         .font(.title3)
                         .fontWeight(.semibold)
                         .foregroundColor(isOwing ? .red : .bulkShareSuccess)
@@ -250,8 +250,8 @@ struct TransactionCard: View {
             if transaction.status == .pending {
                 HStack {
                     if isOwing {
-                        Button("Mark as Paid") {
-                            onMarkAsPaid()
+                        Button("Mark as Settled") {
+                            onMarkAsSettled()
                         }
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -261,7 +261,7 @@ struct TransactionCard: View {
                         .background(Color.bulkSharePrimary)
                         .cornerRadius(8)
                     } else {
-                        Text("Waiting for payment...")
+                        Text("Waiting for settlement...")
                             .font(.caption)
                             .foregroundColor(.bulkShareTextMedium)
                             .frame(maxWidth: .infinity)
@@ -326,7 +326,7 @@ struct EmptyTransactionsView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.bulkShareTextMedium)
             
-            Text("Your payment history will appear here when you start sharing bulk purchases.")
+            Text("Your item exchange history will appear here when you start sharing bulk purchases.")
                 .font(.subheadline)
                 .foregroundColor(.bulkShareTextLight)
                 .multilineTextAlignment(.center)

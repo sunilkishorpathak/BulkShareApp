@@ -1,8 +1,8 @@
 //
 //  EmailService.swift
-//  BulkShareApp
+//  BulkMatesApp
 //
-//  Created on BulkShare Project
+//  Created on BulkMates Project
 //
 
 import Foundation
@@ -61,7 +61,7 @@ class EmailService: NSObject, ObservableObject {
     ) async throws {
         
         // Create email content
-        let subject = "\(inviterName) invited you to join \"\(groupName)\" on BulkShare"
+        let subject = "\(inviterName) invited you to join \"\(groupName)\" on BulkMates"
         let htmlBody = createGroupInvitationHTML(
             groupName: groupName,
             inviterName: inviterName,
@@ -89,7 +89,7 @@ class EmailService: NSObject, ObservableObject {
     
     func sendWelcomeEmail(to email: String, userName: String) async -> Result<Void, EmailError> {
         do {
-            let subject = "Welcome to BulkShare! 🍃"
+            let subject = "Welcome to BulkMates! 🍃"
             let htmlBody = createWelcomeEmailHTML(userName: userName)
             
             // Simulate sending welcome email
@@ -128,7 +128,7 @@ class EmailService: NSObject, ObservableObject {
         tripDetails: TripEmailDetails
     ) async throws {
         
-        let subject = "New BulkShare trip: \(tripDetails.storeName) - \(tripDetails.date)"
+        let subject = "New BulkMates trip: \(tripDetails.storeName) - \(tripDetails.date)"
         let htmlBody = createTripNotificationHTML(tripDetails: tripDetails)
         
         print("📧 TRIP NOTIFICATION SENT:")
@@ -153,22 +153,22 @@ class EmailService: NSObject, ObservableObject {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>BulkShare Group Invitation</title>
+            <title>BulkMates Group Invitation</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             
             <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #4CAF50; font-size: 28px; margin-bottom: 10px;">🍃 BulkShare</h1>
+                <h1 style="color: #4CAF50; font-size: 28px; margin-bottom: 10px;">🍃 BulkMates</h1>
                 <p style="color: #666; font-size: 16px;">Share Smarter, Waste Less</p>
             </div>
             
             <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin-bottom: 25px;">
                 <h2 style="color: #333; margin-top: 0;">You're Invited! 🎉</h2>
                 <p style="font-size: 16px; margin-bottom: 15px;">
-                    <strong>\(inviterName)</strong> has invited you to join the <strong>"\(groupName)"</strong> group on BulkShare.
+                    <strong>\(inviterName)</strong> has invited you to join the <strong>"\(groupName)"</strong> group on BulkMates.
                 </p>
                 <p style="color: #666; margin-bottom: 20px;">
-                    BulkShare helps groups coordinate bulk shopping trips to save money and reduce waste. 
+                    BulkMates helps groups coordinate bulk shopping trips to save money and reduce waste. 
                     Join your group to participate in upcoming trips and split the costs!
                 </p>
             </div>
@@ -180,7 +180,7 @@ class EmailService: NSObject, ObservableObject {
             </div>
             
             <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                <h3 style="color: #2e7d32; margin-top: 0;">What is BulkShare?</h3>
+                <h3 style="color: #2e7d32; margin-top: 0;">What is BulkMates?</h3>
                 <ul style="color: #2e7d32; padding-left: 20px;">
                     <li>Coordinate bulk shopping trips with friends and neighbors</li>
                     <li>Split costs and save money on bulk purchases</li>
@@ -190,7 +190,7 @@ class EmailService: NSObject, ObservableObject {
             </div>
             
             <div style="text-align: center; color: #666; font-size: 14px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-                <p>Don't have the BulkShare app yet?</p>
+                <p>Don't have the BulkMates app yet?</p>
                 <p>
                     <a href="https://apps.apple.com/app/bulkshare" style="color: #4CAF50; text-decoration: none;">Download for iOS</a> • 
                     <a href="https://play.google.com/store/apps/details?id=bulkshare" style="color: #4CAF50; text-decoration: none;">Download for Android</a>
@@ -212,19 +212,19 @@ class EmailService: NSObject, ObservableObject {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Welcome to BulkShare</title>
+            <title>Welcome to BulkMates</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             
             <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #4CAF50; font-size: 32px; margin-bottom: 10px;">🍃 Welcome to BulkShare!</h1>
+                <h1 style="color: #4CAF50; font-size: 32px; margin-bottom: 10px;">🍃 Welcome to BulkMates!</h1>
                 <p style="color: #666; font-size: 18px;">Share Smarter, Waste Less</p>
             </div>
             
             <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin-bottom: 25px;">
                 <h2 style="color: #333; margin-top: 0;">Hi \(userName)! 👋</h2>
                 <p style="font-size: 16px; margin-bottom: 15px;">
-                    Thank you for joining BulkShare! You're now part of a community that's making shopping smarter and more sustainable.
+                    Thank you for joining BulkMates! You're now part of a community that's making shopping smarter and more sustainable.
                 </p>
             </div>
             
@@ -240,7 +240,7 @@ class EmailService: NSObject, ObservableObject {
             
             <div style="text-align: center; margin: 30px 0;">
                 <a href="bulkshare://open" style="background: linear-gradient(45deg, #4CAF50, #45a049); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; display: inline-block;">
-                    Open BulkShare
+                    Open BulkMates
                 </a>
             </div>
             
@@ -263,12 +263,12 @@ class EmailService: NSObject, ObservableObject {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>New BulkShare Trip</title>
+            <title>New BulkMates Trip</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             
             <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #4CAF50; font-size: 28px; margin-bottom: 10px;">🍃 BulkShare</h1>
+                <h1 style="color: #4CAF50; font-size: 28px; margin-bottom: 10px;">🍃 BulkMates</h1>
                 <p style="color: #666; font-size: 16px;">New Trip Available!</p>
             </div>
             

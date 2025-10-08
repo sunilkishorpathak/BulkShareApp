@@ -45,7 +45,7 @@ struct ContentView: View {
                         }
                         
                         // App Name
-                        Text("BulkShare")
+                        Text("BulkMates")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.white)

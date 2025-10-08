@@ -89,14 +89,14 @@ struct EmailDebugView: View {
             EmailLog(
                 type: .welcome,
                 recipient: "user@example.com",
-                subject: "Welcome to BulkShare! 🍃",
+                subject: "Welcome to BulkMates! 🍃",
                 timestamp: Date().addingTimeInterval(-300),
                 status: .sent
             ),
             EmailLog(
                 type: .groupInvitation,
                 recipient: "friend@example.com",
-                subject: "John invited you to join \"Family Group\" on BulkShare",
+                subject: "John invited you to join \"Family Group\" on BulkMates",
                 timestamp: Date().addingTimeInterval(-120),
                 status: .sent
             )

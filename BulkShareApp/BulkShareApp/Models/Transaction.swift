@@ -10,34 +10,34 @@ import Foundation
 struct Transaction: Identifiable, Codable {
     let id: String
     let tripId: String
-    let fromUserId: String // Person who owes money (buyer)
-    let toUserId: String   // Person who should receive money (shopper)
-    let amount: Double
+    let fromUserId: String // Person who owes items (recipient)
+    let toUserId: String   // Person who provided items (shopper)
+    let itemPoints: Int    // Number of items involved in this transaction
     let itemClaimIds: [String] // Claims this transaction covers
     let createdAt: Date
     var status: TransactionStatus
-    var paidAt: Date?
+    var settledAt: Date?
     var notes: String?
     
     init(id: String = UUID().uuidString,
          tripId: String,
          fromUserId: String,
          toUserId: String,
-         amount: Double,
+         itemPoints: Int,
          itemClaimIds: [String],
          createdAt: Date = Date(),
          status: TransactionStatus = .pending,
-         paidAt: Date? = nil,
+         settledAt: Date? = nil,
          notes: String? = nil) {
         self.id = id
         self.tripId = tripId
         self.fromUserId = fromUserId
         self.toUserId = toUserId
-        self.amount = amount
+        self.itemPoints = itemPoints
         self.itemClaimIds = itemClaimIds
         self.createdAt = createdAt
         self.status = status
-        self.paidAt = paidAt
+        self.settledAt = settledAt
         self.notes = notes
     }
     
@@ -48,14 +48,14 @@ struct Transaction: Identifiable, Codable {
 
 enum TransactionStatus: String, Codable, CaseIterable {
     case pending = "pending"
-    case paid = "paid"
+    case settled = "settled"
     case disputed = "disputed"
     case cancelled = "cancelled"
     
     var displayName: String {
         switch self {
         case .pending: return "Pending"
-        case .paid: return "Paid"
+        case .settled: return "Settled"
         case .disputed: return "Disputed"
         case .cancelled: return "Cancelled"
         }
@@ -64,7 +64,7 @@ enum TransactionStatus: String, Codable, CaseIterable {
     var color: String {
         switch self {
         case .pending: return "FF9800"
-        case .paid: return "4CAF50"
+        case .settled: return "4CAF50"
         case .disputed: return "F44336"
         case .cancelled: return "9E9E9E"
         }
@@ -75,20 +75,20 @@ enum TransactionStatus: String, Codable, CaseIterable {
 struct UserBalance: Identifiable, Codable {
     let id: String
     let userId: String
-    var totalOwed: Double    // Money this user owes to others
-    var totalOwedTo: Double  // Money others owe to this user
+    var totalItemsOwed: Int      // Items this user owes to others (negative balance)
+    var totalItemsOwedTo: Int    // Items others owe to this user (positive balance)
     let lastUpdated: Date
     
-    var netBalance: Double {
-        return totalOwedTo - totalOwed
+    var netItemBalance: Int {
+        return totalItemsOwedTo - totalItemsOwed
     }
     
     var balanceDescription: String {
-        let amount = abs(netBalance)
-        if netBalance > 0 {
-            return "You are owed $\(String(format: "%.2f", amount))"
-        } else if netBalance < 0 {
-            return "You owe $\(String(format: "%.2f", amount))"
+        let itemCount = abs(netItemBalance)
+        if netItemBalance > 0 {
+            return "Others owe you \(itemCount) item\(itemCount == 1 ? "" : "s")"
+        } else if netItemBalance < 0 {
+            return "You owe others \(itemCount) item\(itemCount == 1 ? "" : "s")"
         } else {
             return "All settled up!"
         }

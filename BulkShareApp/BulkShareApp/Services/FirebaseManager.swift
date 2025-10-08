@@ -490,10 +490,11 @@ class FirebaseManager: ObservableObject {
     func getGroupTrips(groupId: String) async throws -> [Trip] {
         let snapshot = try await firestore.collection("trips")
             .whereField("groupId", isEqualTo: groupId)
-            .order(by: "scheduledDate", descending: false)
             .getDocuments()
         
-        return snapshot.documents.compactMap { parseTrip(from: $0) }
+        let trips = snapshot.documents.compactMap { parseTrip(from: $0) }
+        // Sort in-memory by scheduledDate
+        return trips.sorted { $0.scheduledDate < $1.scheduledDate }
     }
     
     // MARK: - Claims Management
@@ -663,7 +664,7 @@ class FirebaseManager: ObservableObject {
             "tripId": transaction.tripId,
             "fromUserId": transaction.fromUserId,
             "toUserId": transaction.toUserId,
-            "amount": transaction.amount,
+            "itemPoints": transaction.itemPoints,
             "itemClaimIds": transaction.itemClaimIds,
             "createdAt": transaction.createdAt,
             "status": transaction.status.rawValue,
@@ -685,11 +686,11 @@ class FirebaseManager: ObservableObject {
                 tripId: data["tripId"] as? String ?? "",
                 fromUserId: data["fromUserId"] as? String ?? "",
                 toUserId: data["toUserId"] as? String ?? "",
-                amount: data["amount"] as? Double ?? 0.0,
+                itemPoints: data["itemPoints"] as? Int ?? data["amount"] as? Int ?? 0,
                 itemClaimIds: data["itemClaimIds"] as? [String] ?? [],
                 createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                 status: TransactionStatus(rawValue: data["status"] as? String ?? "pending") ?? .pending,
-                paidAt: (data["paidAt"] as? Timestamp)?.dateValue(),
+                settledAt: (data["settledAt"] as? Timestamp)?.dateValue() ?? (data["paidAt"] as? Timestamp)?.dateValue(),
                 notes: data["notes"] as? String
             )
         }
@@ -715,11 +716,11 @@ class FirebaseManager: ObservableObject {
                 tripId: data["tripId"] as? String ?? "",
                 fromUserId: data["fromUserId"] as? String ?? "",
                 toUserId: data["toUserId"] as? String ?? "",
-                amount: data["amount"] as? Double ?? 0.0,
+                itemPoints: data["itemPoints"] as? Int ?? data["amount"] as? Int ?? 0,
                 itemClaimIds: data["itemClaimIds"] as? [String] ?? [],
                 createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                 status: TransactionStatus(rawValue: data["status"] as? String ?? "pending") ?? .pending,
-                paidAt: (data["paidAt"] as? Timestamp)?.dateValue(),
+                settledAt: (data["settledAt"] as? Timestamp)?.dateValue() ?? (data["paidAt"] as? Timestamp)?.dateValue(),
                 notes: data["notes"] as? String
             )
             transactions.append(transaction)
@@ -733,11 +734,11 @@ class FirebaseManager: ObservableObject {
                 tripId: data["tripId"] as? String ?? "",
                 fromUserId: data["fromUserId"] as? String ?? "",
                 toUserId: data["toUserId"] as? String ?? "",
-                amount: data["amount"] as? Double ?? 0.0,
+                itemPoints: data["itemPoints"] as? Int ?? data["amount"] as? Int ?? 0,
                 itemClaimIds: data["itemClaimIds"] as? [String] ?? [],
                 createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                 status: TransactionStatus(rawValue: data["status"] as? String ?? "pending") ?? .pending,
-                paidAt: (data["paidAt"] as? Timestamp)?.dateValue(),
+                settledAt: (data["settledAt"] as? Timestamp)?.dateValue() ?? (data["paidAt"] as? Timestamp)?.dateValue(),
                 notes: data["notes"] as? String
             )
             transactions.append(transaction)
@@ -751,32 +752,32 @@ class FirebaseManager: ObservableObject {
         return uniqueTransactions.sorted { $0.createdAt > $1.createdAt }
     }
     
-    func markTransactionAsPaid(_ transactionId: String) async throws {
+    func markTransactionAsSettled(_ transactionId: String) async throws {
         try await firestore.collection("transactions").document(transactionId).updateData([
-            "status": TransactionStatus.paid.rawValue,
-            "paidAt": Date()
+            "status": TransactionStatus.settled.rawValue,
+            "settledAt": Date()
         ])
     }
     
     func getUserBalance(userId: String) async throws -> UserBalance {
         let transactions = try await getUserTransactions(userId: userId)
         
-        var totalOwed: Double = 0
-        var totalOwedTo: Double = 0
+        var totalItemsOwed: Int = 0
+        var totalItemsOwedTo: Int = 0
         
         for transaction in transactions where transaction.status == .pending {
             if transaction.fromUserId == userId {
-                totalOwed += transaction.amount
+                totalItemsOwed += transaction.itemPoints
             } else if transaction.toUserId == userId {
-                totalOwedTo += transaction.amount
+                totalItemsOwedTo += transaction.itemPoints
             }
         }
         
         return UserBalance(
             id: UUID().uuidString,
             userId: userId,
-            totalOwed: totalOwed,
-            totalOwedTo: totalOwedTo,
+            totalItemsOwed: totalItemsOwed,
+            totalItemsOwedTo: totalItemsOwedTo,
             lastUpdated: Date()
         )
     }

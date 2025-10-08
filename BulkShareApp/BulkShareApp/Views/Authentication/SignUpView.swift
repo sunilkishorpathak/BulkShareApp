@@ -10,7 +10,6 @@ import SwiftUI
 struct SignUpView: View {
     @State private var fullName: String = ""
     @State private var email: String = ""
-    @State private var paypalId: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
     @State private var isLoading: Bool = false
@@ -23,7 +22,7 @@ struct SignUpView: View {
     @FocusState private var focusedField: Field?
     
     enum Field {
-        case fullName, email, paypalId, password, confirmPassword
+        case fullName, email, password, confirmPassword
     }
     
     var body: some View {
@@ -62,7 +61,7 @@ struct SignUpView: View {
                         }
                         
                         // Title
-                        Text("Join BulkShare")
+                        Text("Join BulkMates")
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -106,25 +105,6 @@ struct SignUpView: View {
                                     .submitLabel(.next)
                             }
                             
-                            // PayPal ID Field
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("PayPal ID")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.bulkShareTextMedium)
-                                
-                                TextField("Enter your PayPal email", text: $paypalId)
-                                    .textFieldStyle(BulkShareTextFieldStyle())
-                                    .keyboardType(.emailAddress)
-                                    .autocapitalization(.none)
-                                    .autocorrectionDisabled()
-                                    .focused($focusedField, equals: .paypalId)
-                                    .submitLabel(.next)
-                                
-                                Text("Optional - for payment settlements")
-                                    .font(.caption)
-                                    .foregroundColor(.bulkShareTextLight)
-                            }
                             
                             // Password Field
                             VStack(alignment: .leading, spacing: 6) {
@@ -164,7 +144,7 @@ struct SignUpView: View {
                             }
                             
                             // Form validation status (for debugging/user feedback)
-                            if !isFormValid && (!fullName.isEmpty || !email.isEmpty || !paypalId.isEmpty || !password.isEmpty || !confirmPassword.isEmpty) {
+                            if !isFormValid && (!fullName.isEmpty || !email.isEmpty || !password.isEmpty || !confirmPassword.isEmpty) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Please complete:")
                                         .font(.caption)
@@ -183,11 +163,6 @@ struct SignUpView: View {
                                     }
                                     if email.isEmpty {
                                         Text("• Email is required")
-                                            .font(.caption)
-                                            .foregroundColor(.red)
-                                    }
-                                    if !paypalId.isEmpty && !isValidEmail(paypalId) {
-                                        Text("• Valid PayPal email format required (if provided)")
                                             .font(.caption)
                                             .foregroundColor(.red)
                                     }
@@ -278,8 +253,6 @@ struct SignUpView: View {
                 case .fullName:
                     focusedField = .email
                 case .email:
-                    focusedField = .paypalId
-                case .paypalId:
                     focusedField = .password
                 case .password:
                     focusedField = .confirmPassword
@@ -317,7 +290,6 @@ struct SignUpView: View {
     private var isFormValid: Bool {
         return !fullName.isEmpty &&
                isValidEmail(email) &&
-               (paypalId.isEmpty || isValidEmail(paypalId)) && // PayPal ID is optional, but if provided must be valid
                password.count >= 6 &&
                password == confirmPassword &&
                !password.isEmpty &&
@@ -337,7 +309,7 @@ struct SignUpView: View {
                 email: email,
                 password: password,
                 fullName: fullName,
-                paypalId: paypalId
+                paypalId: ""
             )
             
             DispatchQueue.main.async {

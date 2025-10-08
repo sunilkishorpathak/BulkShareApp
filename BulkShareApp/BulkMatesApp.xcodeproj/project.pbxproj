@@ -30,9 +30,9 @@
 /* Begin PBXFileReference section */
 		01A995C1C3969C3C66A5DECB /* Pods-BulkShareApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkShareApp.debug.xcconfig"; path = "Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp.debug.xcconfig"; sourceTree = "<group>"; };
 		75F0744AB38B2AB5D0ACD53B /* Pods_BulkShareApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BulkShareApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		B90C7FFA2E87D3F000F3251D /* BulkShareApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BulkShareApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		B90C80072E87D3F300F3251D /* BulkShareAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkShareAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		B90C80112E87D3F300F3251D /* BulkShareAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkShareAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B90C7FFA2E87D3F000F3251D /* BulkMatesApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BulkMatesApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B90C80072E87D3F300F3251D /* BulkMatesAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkMatesAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B90C80112E87D3F300F3251D /* BulkMatesAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkMatesAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CDD199D972F6955443D98426 /* Pods-BulkShareApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkShareApp.release.xcconfig"; path = "Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -112,9 +112,9 @@
 		B90C7FFB2E87D3F000F3251D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B90C7FFA2E87D3F000F3251D /* BulkShareApp.app */,
-				B90C80072E87D3F300F3251D /* BulkShareAppTests.xctest */,
-				B90C80112E87D3F300F3251D /* BulkShareAppUITests.xctest */,
+				B90C7FFA2E87D3F000F3251D /* BulkMatesApp.app */,
+				B90C80072E87D3F300F3251D /* BulkMatesAppTests.xctest */,
+				B90C80112E87D3F300F3251D /* BulkMatesAppUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -122,9 +122,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B90C7FF92E87D3EF00F3251D /* BulkShareApp */ = {
+		B90C7FF92E87D3EF00F3251D /* BulkMatesApp */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B90C801B2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkShareApp" */;
+			buildConfigurationList = B90C801B2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkMatesApp" */;
 			buildPhases = (
 				153B87C4E816EC607DF85CE9 /* [CP] Check Pods Manifest.lock */,
 				B90C7FF62E87D3EF00F3251D /* Sources */,
@@ -139,14 +139,14 @@
 			fileSystemSynchronizedGroups = (
 				B90C7FFC2E87D3F000F3251D /* BulkShareApp */,
 			);
-			name = BulkShareApp;
+			name = BulkMatesApp;
 			productName = BulkShareApp;
-			productReference = B90C7FFA2E87D3F000F3251D /* BulkShareApp.app */;
+			productReference = B90C7FFA2E87D3F000F3251D /* BulkMatesApp.app */;
 			productType = "com.apple.product-type.application";
 		};
-		B90C80062E87D3F300F3251D /* BulkShareAppTests */ = {
+		B90C80062E87D3F300F3251D /* BulkMatesAppTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B90C801E2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkShareAppTests" */;
+			buildConfigurationList = B90C801E2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkMatesAppTests" */;
 			buildPhases = (
 				B90C80032E87D3F300F3251D /* Sources */,
 				B90C80042E87D3F300F3251D /* Frameworks */,
@@ -160,14 +160,14 @@
 			fileSystemSynchronizedGroups = (
 				B90C800A2E87D3F300F3251D /* BulkShareAppTests */,
 			);
-			name = BulkShareAppTests;
+			name = BulkMatesAppTests;
 			productName = BulkShareAppTests;
-			productReference = B90C80072E87D3F300F3251D /* BulkShareAppTests.xctest */;
+			productReference = B90C80072E87D3F300F3251D /* BulkMatesAppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		B90C80102E87D3F300F3251D /* BulkShareAppUITests */ = {
+		B90C80102E87D3F300F3251D /* BulkMatesAppUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B90C80212E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkShareAppUITests" */;
+			buildConfigurationList = B90C80212E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkMatesAppUITests" */;
 			buildPhases = (
 				B90C800D2E87D3F300F3251D /* Sources */,
 				B90C800E2E87D3F300F3251D /* Frameworks */,
@@ -181,9 +181,9 @@
 			fileSystemSynchronizedGroups = (
 				B90C80142E87D3F300F3251D /* BulkShareAppUITests */,
 			);
-			name = BulkShareAppUITests;
+			name = BulkMatesAppUITests;
 			productName = BulkShareAppUITests;
-			productReference = B90C80112E87D3F300F3251D /* BulkShareAppUITests.xctest */;
+			productReference = B90C80112E87D3F300F3251D /* BulkMatesAppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -209,7 +209,7 @@
 					};
 				};
 			};
-			buildConfigurationList = B90C7FF52E87D3EF00F3251D /* Build configuration list for PBXProject "BulkShareApp" */;
+			buildConfigurationList = B90C7FF52E87D3EF00F3251D /* Build configuration list for PBXProject "BulkMatesApp" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -223,9 +223,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B90C7FF92E87D3EF00F3251D /* BulkShareApp */,
-				B90C80062E87D3F300F3251D /* BulkShareAppTests */,
-				B90C80102E87D3F300F3251D /* BulkShareAppUITests */,
+				B90C7FF92E87D3EF00F3251D /* BulkMatesApp */,
+				B90C80062E87D3F300F3251D /* BulkMatesAppTests */,
+				B90C80102E87D3F300F3251D /* BulkMatesAppUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -327,12 +327,12 @@
 /* Begin PBXTargetDependency section */
 		B90C80092E87D3F300F3251D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = B90C7FF92E87D3EF00F3251D /* BulkShareApp */;
+			target = B90C7FF92E87D3EF00F3251D /* BulkMatesApp */;
 			targetProxy = B90C80082E87D3F300F3251D /* PBXContainerItemProxy */;
 		};
 		B90C80132E87D3F300F3251D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = B90C7FF92E87D3EF00F3251D /* BulkShareApp */;
+			target = B90C7FF92E87D3EF00F3251D /* BulkMatesApp */;
 			targetProxy = B90C80122E87D3F300F3251D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -466,7 +466,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 8379L6GMZ3;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -480,7 +480,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bulkshare.app.BulkShareApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sunilpathak.bulkmates;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -498,7 +498,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 8379L6GMZ3;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -512,7 +512,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bulkshare.app.BulkShareApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sunilpathak.bulkmates;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -536,7 +536,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BulkShareApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BulkShareApp";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BulkMatesApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BulkMatesApp";
 			};
 			name = Debug;
 		};
@@ -555,7 +555,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BulkShareApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BulkShareApp";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BulkMatesApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BulkMatesApp";
 			};
 			name = Release;
 		};
@@ -596,7 +596,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B90C7FF52E87D3EF00F3251D /* Build configuration list for PBXProject "BulkShareApp" */ = {
+		B90C7FF52E87D3EF00F3251D /* Build configuration list for PBXProject "BulkMatesApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B90C80192E87D3F300F3251D /* Debug */,
@@ -605,7 +605,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B90C801B2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkShareApp" */ = {
+		B90C801B2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkMatesApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B90C801C2E87D3F300F3251D /* Debug */,
@@ -614,7 +614,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B90C801E2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkShareAppTests" */ = {
+		B90C801E2E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkMatesAppTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B90C801F2E87D3F300F3251D /* Debug */,
@@ -623,7 +623,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B90C80212E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkShareAppUITests" */ = {
+		B90C80212E87D3F300F3251D /* Build configuration list for PBXNativeTarget "BulkMatesAppUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B90C80222E87D3F300F3251D /* Debug */,

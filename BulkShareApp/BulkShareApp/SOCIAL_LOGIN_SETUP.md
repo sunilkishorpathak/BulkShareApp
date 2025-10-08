@@ -1,6 +1,6 @@
 # Social Login Setup Instructions
 
-This file contains instructions for setting up social authentication providers for BulkShareApp.
+This file contains instructions for setting up social authentication providers for BulkMatesApp.
 
 ## 🍎 Apple Sign In Setup
 
@@ -19,7 +19,7 @@ This file contains instructions for setting up social authentication providers f
 
 ### 1. Pod Installation
 ```bash
-cd BulkShareApp
+cd BulkMatesApp
 pod install
 ```
 
@@ -45,7 +45,7 @@ Add to `Info.plist`:
 ```
 
 ### 4. App Delegate Configuration
-Add to `BulkShareAppApp.swift`:
+Add to `BulkMatesAppApp.swift`:
 ```swift
 import GoogleSignIn
 
@@ -83,7 +83,7 @@ Add to `Info.plist`:
 <key>FacebookClientToken</key>
 <string>YOUR_CLIENT_TOKEN</string>
 <key>FacebookDisplayName</key>
-<string>BulkShare</string>
+<string>BulkMates</string>
 ```
 
 ### 3. Firebase Console Setup

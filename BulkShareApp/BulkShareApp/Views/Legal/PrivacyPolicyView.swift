@@ -28,7 +28,6 @@ struct PrivacyPolicyView: View {
                         LegalSectionView(title: "1. Information We Collect") {
                             Text("We collect information you provide directly to us, such as when you create an account, join groups, create shopping trips, or contact us for support. This may include:")
                             LegalBulletPoint("Name and email address")
-                            LegalBulletPoint("PayPal ID for payment coordination")
                             LegalBulletPoint("Group memberships and trip participation")
                             LegalBulletPoint("Shopping preferences and history")
                         }
@@ -36,7 +35,7 @@ struct PrivacyPolicyView: View {
                         LegalSectionView(title: "2. How We Use Your Information") {
                             Text("We use the information we collect to:")
                             LegalBulletPoint("Provide, maintain, and improve our services")
-                            LegalBulletPoint("Process transactions and coordinate payments")
+                            LegalBulletPoint("Coordinate bulk shopping trips and item sharing")
                             LegalBulletPoint("Send you notifications about trips and group activities")
                             LegalBulletPoint("Respond to your comments and questions")
                             LegalBulletPoint("Prevent fraud and enhance security")
@@ -64,7 +63,7 @@ struct PrivacyPolicyView: View {
                         
                         LegalSectionView(title: "6. Contact Us") {
                             Text("If you have any questions about this Privacy Policy, please contact us at:")
-                            Text("Email: privacy@bulkshare.app")
+                            Text("Email: privacy@bulkmates.app")
                                 .fontWeight(.medium)
                         }
                     }

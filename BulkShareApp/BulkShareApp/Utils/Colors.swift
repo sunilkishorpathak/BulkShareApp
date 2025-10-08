@@ -8,25 +8,37 @@
 import SwiftUI
 
 extension Color {
-    // MARK: - BulkShare Color Scheme
+    // MARK: - BulkMates Color Scheme
     
     // Primary Colors
-    static let bulkSharePrimary = Color(hex: "4CAF50")      // Green
-    static let bulkShareSecondary = Color(hex: "45a049")    // Dark Green
+    static let bulkMatesPrimary = Color(hex: "4CAF50")      // Green
+    static let bulkMatesSecondary = Color(hex: "45a049")    // Dark Green
     
     // Background Colors
-    static let bulkShareBackground = Color(hex: "f8f9fa")   // Light Gray
+    static let bulkMatesBackground = Color(hex: "f8f9fa")   // Light Gray
     
     // Text Colors
-    static let bulkShareTextDark = Color(hex: "333333")     // Dark
-    static let bulkShareTextMedium = Color(hex: "666666")   // Medium
-    static let bulkShareTextLight = Color(hex: "999999")    // Light
+    static let bulkMatesTextDark = Color(hex: "333333")     // Dark
+    static let bulkMatesTextMedium = Color(hex: "666666")   // Medium
+    static let bulkMatesTextLight = Color(hex: "999999")    // Light
     
     // Additional UI Colors
-    static let bulkShareSuccess = Color(hex: "28a745")
-    static let bulkShareWarning = Color(hex: "ffc107")
-    static let bulkShareError = Color(hex: "dc3545")
-    static let bulkShareInfo = Color(hex: "17a2b8")
+    static let bulkMatesSuccess = Color(hex: "28a745")
+    static let bulkMatesWarning = Color(hex: "ffc107")
+    static let bulkMatesError = Color(hex: "dc3545")
+    static let bulkMatesInfo = Color(hex: "17a2b8")
+    
+    // MARK: - Legacy BulkShare Colors (for backward compatibility)
+    static let bulkSharePrimary = bulkMatesPrimary
+    static let bulkShareSecondary = bulkMatesSecondary
+    static let bulkShareBackground = bulkMatesBackground
+    static let bulkShareTextDark = bulkMatesTextDark
+    static let bulkShareTextMedium = bulkMatesTextMedium
+    static let bulkShareTextLight = bulkMatesTextLight
+    static let bulkShareSuccess = bulkMatesSuccess
+    static let bulkShareWarning = bulkMatesWarning
+    static let bulkShareError = bulkMatesError
+    static let bulkShareInfo = bulkMatesInfo
 }
 
 // MARK: - Color Extension for Hex Support

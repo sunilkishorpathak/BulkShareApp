@@ -132,13 +132,11 @@ struct CreateTripView: View {
                 // Save to Firestore
                 let tripId = try await FirebaseManager.shared.createTrip(trip)
                 
-                let totalValue = tripItems.reduce(0) { $0 + ($1.estimatedPrice * Double($1.quantityAvailable)) }
-                
                 DispatchQueue.main.async {
                     self.isLoading = false
                     self.showAlert(
                         title: "Trip Created!",
-                        message: "Your \(self.selectedStore.displayName) trip with \(self.tripItems.count) items (estimated $\(String(format: "%.2f", totalValue))) has been posted to \(self.group.name)."
+                        message: "Your \(self.selectedStore.displayName) trip with \(self.tripItems.count) items has been posted to \(self.group.name)."
                     )
                 }
                 

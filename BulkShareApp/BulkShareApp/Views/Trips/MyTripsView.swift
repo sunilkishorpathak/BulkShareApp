@@ -77,7 +77,10 @@ struct MyTripsView: View {
             }
             .navigationTitle("My Trips")
             .navigationBarTitleDisplayMode(.large)
-            .sheet(isPresented: $showingTripFlow) {
+            .sheet(isPresented: $showingTripFlow, onDismiss: {
+                // Refresh trips when sheet is dismissed
+                loadUserTrips()
+            }) {
                 switch tripFlowState {
                 case .groupSelection:
                     GroupSelectionView { group in
@@ -266,7 +269,7 @@ struct UpcomingTripCard: View {
             }
             
             // Items
-            Text("\(trip.items.count) items • $\(trip.totalEstimatedCost, specifier: "%.2f")")
+            Text("\(trip.items.count) items shared")
                 .font(.subheadline)
                 .foregroundColor(.bulkShareTextMedium)
             
@@ -309,7 +312,7 @@ struct PastTripCard: View {
                 .foregroundColor(.bulkShareTextMedium)
             
             HStack {
-                Text("$\(trip.totalEstimatedCost, specifier: "%.2f") saved")
+                Text("\(trip.items.count) items shared")
                     .font(.subheadline)
                     .foregroundColor(.bulkShareSuccess)
                 
