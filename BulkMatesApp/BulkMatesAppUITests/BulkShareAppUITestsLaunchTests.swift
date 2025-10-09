@@ -1,13 +1,13 @@
 //
-//  BulkShareAppUITestsLaunchTests.swift
-//  BulkShareAppUITests
+//  BulkMatesAppUITestsLaunchTests.swift
+//  BulkMatesAppUITests
 //
 //  Created by Sunil Pathak on 9/27/25.
 //
 
 import XCTest
 
-final class BulkShareAppUITestsLaunchTests: XCTestCase {
+final class BulkMatesAppUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

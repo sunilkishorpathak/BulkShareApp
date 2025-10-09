@@ -1,13 +1,13 @@
 //
-//  BulkShareAppUITests.swift
-//  BulkShareAppUITests
+//  BulkMatesAppUITests.swift
+//  BulkMatesAppUITests
 //
 //  Created by Sunil Pathak on 9/27/25.
 //
 
 import XCTest
 
-final class BulkShareAppUITests: XCTestCase {
+final class BulkMatesAppUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

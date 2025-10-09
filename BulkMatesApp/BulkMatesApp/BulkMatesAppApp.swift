@@ -1,15 +1,15 @@
 //
-//  BulkShareAppApp.swift
-//  BulkShareApp
+//  BulkMatesAppApp.swift
+//  BulkMatesApp
 //
-//  Created on BulkShare Project
+//  Created on BulkMates Project
 //
 
 import SwiftUI
 import Firebase
 
 @main
-struct BulkShareAppApp: App {
+struct BulkMatesAppApp: App {
     @StateObject private var firebaseManager = FirebaseManager.shared
     
     init() {

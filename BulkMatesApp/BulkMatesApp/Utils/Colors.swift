@@ -1,8 +1,8 @@
 //
 //  Colors.swift
-//  BulkShareApp
+//  BulkMatesApp
 //
-//  Created on BulkShare Project
+//  Created on BulkMates Project
 //
 
 import SwiftUI

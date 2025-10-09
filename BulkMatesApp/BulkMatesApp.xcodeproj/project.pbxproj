@@ -16,14 +16,14 @@
 			containerPortal = B90C7FF22E87D3EF00F3251D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = B90C7FF92E87D3EF00F3251D;
-			remoteInfo = BulkShareApp;
+			remoteInfo = BulkMatesApp;
 		};
 		B90C80122E87D3F300F3251D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B90C7FF22E87D3EF00F3251D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = B90C7FF92E87D3EF00F3251D;
-			remoteInfo = BulkShareApp;
+			remoteInfo = BulkMatesApp;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -39,25 +39,19 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B90C7FFC2E87D3F000F3251D /* BulkShareApp */ = {
+		B90C7FFC2E87D3F000F3251D /* BulkMatesApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			path = BulkShareApp;
+			path = BulkMatesApp;
 			sourceTree = "<group>";
 		};
-		B90C800A2E87D3F300F3251D /* BulkShareAppTests */ = {
+		B90C800A2E87D3F300F3251D /* BulkMatesAppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			path = BulkShareAppTests;
+			path = BulkMatesAppTests;
 			sourceTree = "<group>";
 		};
-		B90C80142E87D3F300F3251D /* BulkShareAppUITests */ = {
+		B90C80142E87D3F300F3251D /* BulkMatesAppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			path = BulkShareAppUITests;
+			path = BulkMatesAppUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -110,9 +104,9 @@
 		B90C7FF12E87D3EF00F3251D = {
 			isa = PBXGroup;
 			children = (
-				B90C7FFC2E87D3F000F3251D /* BulkShareApp */,
-				B90C800A2E87D3F300F3251D /* BulkShareAppTests */,
-				B90C80142E87D3F300F3251D /* BulkShareAppUITests */,
+				B90C7FFC2E87D3F000F3251D /* BulkMatesApp */,
+				B90C800A2E87D3F300F3251D /* BulkMatesAppTests */,
+				B90C80142E87D3F300F3251D /* BulkMatesAppUITests */,
 				B90C7FFB2E87D3F000F3251D /* Products */,
 				6EB991F3C1D0EC5CB0044815 /* Pods */,
 				5D88E26DD7DC3773F1101D23 /* Frameworks */,
@@ -147,10 +141,10 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				B90C7FFC2E87D3F000F3251D /* BulkShareApp */,
+				B90C7FFC2E87D3F000F3251D /* BulkMatesApp */,
 			);
 			name = BulkMatesApp;
-			productName = BulkShareApp;
+			productName = BulkMatesApp;
 			productReference = B90C7FFA2E87D3F000F3251D /* BulkMatesApp.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -168,10 +162,10 @@
 				B90C80092E87D3F300F3251D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				B90C800A2E87D3F300F3251D /* BulkShareAppTests */,
+				B90C800A2E87D3F300F3251D /* BulkMatesAppTests */,
 			);
 			name = BulkMatesAppTests;
-			productName = BulkShareAppTests;
+			productName = BulkMatesAppTests;
 			productReference = B90C80072E87D3F300F3251D /* BulkMatesAppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -189,10 +183,10 @@
 				B90C80132E87D3F300F3251D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				B90C80142E87D3F300F3251D /* BulkShareAppUITests */,
+				B90C80142E87D3F300F3251D /* BulkMatesAppUITests */,
 			);
 			name = BulkMatesAppUITests;
-			productName = BulkShareAppUITests;
+			productName = BulkMatesAppUITests;
 			productReference = B90C80112E87D3F300F3251D /* BulkMatesAppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -295,9 +289,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-BulkMatesApp/Pods-BulkMatesApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-BulkMatesApp/Pods-BulkMatesApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -537,7 +535,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bulkshare.app.BulkShareAppTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sunilpathak.bulkmates.BulkMatesAppTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -556,7 +554,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bulkshare.app.BulkShareAppTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sunilpathak.bulkmates.BulkMatesAppTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -573,12 +571,12 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bulkshare.app.BulkShareAppUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sunilpathak.bulkmates.BulkMatesAppUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = BulkShareApp;
+				TEST_TARGET_NAME = BulkMatesApp;
 			};
 			name = Debug;
 		};
@@ -590,12 +588,12 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bulkshare.app.BulkShareAppUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sunilpathak.bulkmates.BulkMatesAppUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = BulkShareApp;
+				TEST_TARGET_NAME = BulkMatesApp;
 			};
 			name = Release;
 		};
