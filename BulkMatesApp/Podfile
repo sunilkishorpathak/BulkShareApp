@@ -1,6 +1,6 @@
 platform :ios, '15.0'
 
-target 'BulkShareApp' do
+target 'BulkMatesApp' do
   use_frameworks!
   
   pod 'Firebase/Auth'

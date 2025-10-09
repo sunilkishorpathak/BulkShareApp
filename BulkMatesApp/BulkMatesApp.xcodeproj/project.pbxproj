@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		269668719B9FB94E0409D973 /* Pods_BulkShareApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 75F0744AB38B2AB5D0ACD53B /* Pods_BulkShareApp.framework */; };
+		B4B786292C87130EB5E8E7C5 /* Pods_BulkMatesApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 595FE36F8E46FCA8AB008AFC /* Pods_BulkMatesApp.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,7 +29,9 @@
 
 /* Begin PBXFileReference section */
 		01A995C1C3969C3C66A5DECB /* Pods-BulkShareApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkShareApp.debug.xcconfig"; path = "Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp.debug.xcconfig"; sourceTree = "<group>"; };
-		75F0744AB38B2AB5D0ACD53B /* Pods_BulkShareApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BulkShareApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		1882BB39EAC6F52B69AE2826 /* Pods-BulkMatesApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkMatesApp.debug.xcconfig"; path = "Target Support Files/Pods-BulkMatesApp/Pods-BulkMatesApp.debug.xcconfig"; sourceTree = "<group>"; };
+		595FE36F8E46FCA8AB008AFC /* Pods_BulkMatesApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BulkMatesApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		61F60BCFA5C9C30708AA1B3B /* Pods-BulkMatesApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BulkMatesApp.release.xcconfig"; path = "Target Support Files/Pods-BulkMatesApp/Pods-BulkMatesApp.release.xcconfig"; sourceTree = "<group>"; };
 		B90C7FFA2E87D3F000F3251D /* BulkMatesApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BulkMatesApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B90C80072E87D3F300F3251D /* BulkMatesAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkMatesAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B90C80112E87D3F300F3251D /* BulkMatesAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BulkMatesAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -39,16 +41,22 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B90C7FFC2E87D3F000F3251D /* BulkShareApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = BulkShareApp;
 			sourceTree = "<group>";
 		};
 		B90C800A2E87D3F300F3251D /* BulkShareAppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = BulkShareAppTests;
 			sourceTree = "<group>";
 		};
 		B90C80142E87D3F300F3251D /* BulkShareAppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = BulkShareAppUITests;
 			sourceTree = "<group>";
 		};
@@ -59,7 +67,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				269668719B9FB94E0409D973 /* Pods_BulkShareApp.framework in Frameworks */,
+				B4B786292C87130EB5E8E7C5 /* Pods_BulkMatesApp.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,7 +91,7 @@
 		5D88E26DD7DC3773F1101D23 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				75F0744AB38B2AB5D0ACD53B /* Pods_BulkShareApp.framework */,
+				595FE36F8E46FCA8AB008AFC /* Pods_BulkMatesApp.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -93,6 +101,8 @@
 			children = (
 				01A995C1C3969C3C66A5DECB /* Pods-BulkShareApp.debug.xcconfig */,
 				CDD199D972F6955443D98426 /* Pods-BulkShareApp.release.xcconfig */,
+				1882BB39EAC6F52B69AE2826 /* Pods-BulkMatesApp.debug.xcconfig */,
+				61F60BCFA5C9C30708AA1B3B /* Pods-BulkMatesApp.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -270,7 +280,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-BulkShareApp-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-BulkMatesApp-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -283,19 +293,15 @@
 			files = (
 			);
 			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-BulkMatesApp/Pods-BulkMatesApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-BulkMatesApp/Pods-BulkMatesApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BulkShareApp/Pods-BulkShareApp-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BulkMatesApp/Pods-BulkMatesApp-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -459,7 +465,7 @@
 		};
 		B90C801C2E87D3F300F3251D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 01A995C1C3969C3C66A5DECB /* Pods-BulkShareApp.debug.xcconfig */;
+			baseConfigurationReference = 1882BB39EAC6F52B69AE2826 /* Pods-BulkMatesApp.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -491,7 +497,7 @@
 		};
 		B90C801D2E87D3F300F3251D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = CDD199D972F6955443D98426 /* Pods-BulkShareApp.release.xcconfig */;
+			baseConfigurationReference = 61F60BCFA5C9C30708AA1B3B /* Pods-BulkMatesApp.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

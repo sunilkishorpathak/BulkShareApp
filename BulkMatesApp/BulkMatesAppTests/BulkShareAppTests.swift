@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import BulkShareApp
+@testable import BulkMatesApp
 
 struct BulkShareAppTests {
 

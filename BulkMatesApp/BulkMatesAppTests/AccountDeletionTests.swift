@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import BulkShareApp
+@testable import BulkMatesApp
 
 final class AccountDeletionTests: XCTestCase {
     
