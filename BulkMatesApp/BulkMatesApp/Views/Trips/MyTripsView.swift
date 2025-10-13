@@ -208,7 +208,10 @@ struct PastTripsView: View {
                     )
                 } else {
                     ForEach(trips) { trip in
-                        PastTripCard(trip: trip)
+                        NavigationLink(destination: PastTripDetailView(trip: trip)) {
+                            PastTripCard(trip: trip)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
             }

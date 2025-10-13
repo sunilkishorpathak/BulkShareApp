@@ -781,6 +781,130 @@ class FirebaseManager: ObservableObject {
             lastUpdated: Date()
         )
     }
+    
+    // MARK: - Item Delivery Methods
+    
+    func createDeliveryRecords(for claims: [ItemClaim], delivererUserId: String) async throws {
+        let batch = firestore.batch()
+        
+        for claim in claims where claim.status == .accepted {
+            let delivery = ItemDelivery.createFromClaim(claim, delivererUserId: delivererUserId)
+            let deliveryRef = firestore.collection("deliveries").document(delivery.id)
+            
+            do {
+                let deliveryData = try Firestore.Encoder().encode(delivery)
+                batch.setData(deliveryData, forDocument: deliveryRef)
+            } catch {
+                throw error
+            }
+        }
+        
+        try await batch.commit()
+    }
+    
+    func getTripDeliveries(tripId: String) async throws -> [ItemDelivery] {
+        let snapshot = try await firestore.collection("deliveries")
+            .whereField("tripId", isEqualTo: tripId)
+            .getDocuments()
+        
+        var deliveries: [ItemDelivery] = []
+        
+        for document in snapshot.documents {
+            do {
+                let delivery = try document.data(as: ItemDelivery.self)
+                deliveries.append(delivery)
+            } catch {
+                print("Error decoding delivery: \(error)")
+            }
+        }
+        
+        return deliveries.sorted { $0.createdAt > $1.createdAt }
+    }
+    
+    func getUserDeliveries(userId: String) async throws -> [ItemDelivery] {
+        let snapshot = try await firestore.collection("deliveries")
+            .whereField("receiverUserId", isEqualTo: userId)
+            .getDocuments()
+        
+        var deliveries: [ItemDelivery] = []
+        
+        for document in snapshot.documents {
+            do {
+                let delivery = try document.data(as: ItemDelivery.self)
+                deliveries.append(delivery)
+            } catch {
+                print("Error decoding delivery: \(error)")
+            }
+        }
+        
+        return deliveries.sorted { $0.createdAt > $1.createdAt }
+    }
+    
+    func getDeliveriesToMake(delivererUserId: String) async throws -> [ItemDelivery] {
+        let snapshot = try await firestore.collection("deliveries")
+            .whereField("delivererUserId", isEqualTo: delivererUserId)
+            .whereField("isDelivered", isEqualTo: false)
+            .getDocuments()
+        
+        var deliveries: [ItemDelivery] = []
+        
+        for document in snapshot.documents {
+            do {
+                let delivery = try document.data(as: ItemDelivery.self)
+                deliveries.append(delivery)
+            } catch {
+                print("Error decoding delivery: \(error)")
+            }
+        }
+        
+        return deliveries.sorted { $0.createdAt > $1.createdAt }
+    }
+    
+    func markItemAsDelivered(deliveryId: String, deliveredAt: Date, confirmationNote: String?) async throws {
+        var updateData: [String: Any] = [
+            "isDelivered": true,
+            "deliveredAt": deliveredAt
+        ]
+        
+        if let note = confirmationNote {
+            updateData["confirmationNote"] = note
+        }
+        
+        try await firestore.collection("deliveries").document(deliveryId).updateData(updateData)
+    }
+    
+    func autoCreateDeliveryRecordsForCompletedTrip(tripId: String) async throws {
+        // Get all accepted claims for this trip
+        let claims = try await getTripClaims(tripId: tripId)
+        let acceptedClaims = claims.filter { $0.status == .accepted }
+        
+        // Get the trip to find the shopper
+        let trip = try await getTrip(tripId: tripId)
+        
+        // Create delivery records for all accepted claims
+        try await createDeliveryRecords(for: acceptedClaims, delivererUserId: trip.shopperId)
+    }
+    
+    func markTripAsCompleted(tripId: String) async throws {
+        // Update trip status to completed
+        try await firestore.collection("trips").document(tripId).updateData([
+            "status": TripStatus.completed.rawValue
+        ])
+        
+        // Automatically create delivery records for all accepted claims
+        try await autoCreateDeliveryRecordsForCompletedTrip(tripId: tripId)
+    }
+    
+    func updateTripStatus(tripId: String, status: TripStatus) async throws {
+        try await firestore.collection("trips").document(tripId).updateData([
+            "status": status.rawValue
+        ])
+        
+        // If marking as completed, create delivery records
+        if status == .completed {
+            try await autoCreateDeliveryRecordsForCompletedTrip(tripId: tripId)
+        }
+    }
 }
 
 // MARK: - Custom Errors
