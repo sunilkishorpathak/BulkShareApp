@@ -44,27 +44,20 @@ struct PastTripDetailView: View {
                 // Trip Header (similar to TripDetailView but read-only)
                 PastTripHeader(trip: trip)
                 
-                if isOrganizerView {
-                    // Organizer View: Show all claimed items with delivery checkboxes
-                    OrganizerItemsSection(
-                        trip: trip,
-                        claims: acceptedClaims,
-                        deliveries: deliveries,
-                        onToggleDelivery: { claim, delivery in
-                            handleDeliveryToggle(claim: claim, delivery: delivery)
-                        }
-                    )
-                } else {
-                    // Participant View: Show their claimed items with received checkboxes
-                    ParticipantItemsSection(
-                        trip: trip,
-                        userClaims: acceptedClaims.filter { $0.claimerUserId == currentUserId },
-                        deliveries: deliveries,
-                        onToggleReceived: { claim, delivery in
-                            handleDeliveryToggle(claim: claim, delivery: delivery)
-                        }
-                    )
-                }
+                // Show Original Trip Items (what was planned)
+                TripItemsListSection(
+                    title: "Trip Items (\(trip.items.count))",
+                    items: trip.items,
+                    claims: acceptedClaims,
+                    deliveries: deliveries,
+                    isOrganizerView: isOrganizerView,
+                    currentUserId: currentUserId,
+                    onToggleDelivery: { claim, delivery in
+                        handleDeliveryToggle(claim: claim, delivery: delivery)
+                    }
+                )
+                
+                // All delivery tracking is now integrated into the main trip items list above
                 
                 
                 // Trip Summary
@@ -265,32 +258,31 @@ struct PastTripHeader: View {
     }
 }
 
-struct OrganizerItemsSection: View {
-    let trip: Trip
+struct TripItemsListSection: View {
+    let title: String
+    let items: [TripItem]
     let claims: [ItemClaim]
     let deliveries: [ItemDelivery]
+    let isOrganizerView: Bool
+    let currentUserId: String
     let onToggleDelivery: (ItemClaim, ItemDelivery?) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Claimed Items (\(claims.count))")
+            Text(title)
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.bulkShareTextDark)
             
-            if claims.isEmpty {
+            if items.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "cart")
                         .font(.system(size: 40))
                         .foregroundColor(.bulkShareTextLight)
                     
-                    Text("No items were claimed")
+                    Text("No items in this trip")
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
-                        
-                    Text("This trip had no participants")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextLight)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(30)
@@ -298,17 +290,20 @@ struct OrganizerItemsSection: View {
                 .cornerRadius(12)
             } else {
                 VStack(spacing: 12) {
-                    ForEach(claims) { claim in
-                        if let item = trip.items.first(where: { $0.id == claim.itemId }) {
-                            let delivery = deliveries.first { $0.claimId == claim.id }
-                            ClaimedItemCard(
-                                item: item,
-                                claim: claim,
-                                delivery: delivery,
-                                isOrganizerView: true,
-                                onToggleDelivery: { onToggleDelivery(claim, delivery) }
-                            )
-                        }
+                    ForEach(items) { item in
+                        let itemClaims = claims.filter { $0.itemId == item.id }
+                        let totalClaimed = itemClaims.reduce(0) { $0 + $1.quantityClaimed }
+                        
+                        TripItemRow(
+                            item: item,
+                            totalClaimed: totalClaimed,
+                            availableQuantity: item.quantityAvailable,
+                            claims: itemClaims,
+                            deliveries: deliveries,
+                            isOrganizerView: isOrganizerView,
+                            currentUserId: currentUserId,
+                            onToggleDelivery: onToggleDelivery
+                        )
                     }
                 }
             }
@@ -320,24 +315,18 @@ struct OrganizerItemsSection: View {
     }
 }
 
-struct ClaimedItemCard: View {
+struct TripItemRow: View {
     let item: TripItem
-    let claim: ItemClaim
-    let delivery: ItemDelivery?
+    let totalClaimed: Int
+    let availableQuantity: Int
+    let claims: [ItemClaim]
+    let deliveries: [ItemDelivery]
     let isOrganizerView: Bool
-    let onToggleDelivery: () -> Void
-    @State private var claimerName: String = "Loading..."
-    
-    private var isDelivered: Bool {
-        delivery?.isDelivered ?? false
-    }
-    
-    private var checkboxText: String {
-        isOrganizerView ? "Delivered" : "Received"
-    }
+    let currentUserId: String
+    let onToggleDelivery: (ItemClaim, ItemDelivery?) -> Void
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.name)
@@ -345,65 +334,127 @@ struct ClaimedItemCard: View {
                         .fontWeight(.medium)
                         .foregroundColor(.bulkShareTextDark)
                     
-                    if isOrganizerView {
-                        Text("Claimed by: \(claimerName)")
-                            .font(.caption)
-                            .foregroundColor(.bulkShareTextMedium)
-                    } else {
-                        Text("\(item.category.icon) \(item.category.displayName)")
-                            .font(.caption)
-                            .foregroundColor(.bulkShareTextMedium)
-                    }
-                    
-                    Text("Quantity: \(claim.quantityClaimed)")
+                    Text("\(item.category.icon) \(item.category.displayName)")
                         .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.bulkSharePrimary)
+                        .foregroundColor(.bulkShareTextMedium)
+                    
+                    if let notes = item.notes, !notes.isEmpty {
+                        Text(notes)
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextLight)
+                            .italic()
+                    }
                 }
                 
                 Spacer()
                 
-                // Checkbox for delivery status
-                Button(action: onToggleDelivery) {
-                    HStack(spacing: 8) {
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Available: \(availableQuantity)")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextMedium)
+                    
+                    Text("Claimed: \(totalClaimed)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(totalClaimed > 0 ? .bulkShareSuccess : .bulkShareTextLight)
+                    
+                    Text("$\(item.estimatedPrice, specifier: "%.2f")")
+                        .font(.caption)
+                        .foregroundColor(.bulkSharePrimary)
+                }
+            }
+            
+            // Show who claimed this item with delivery checkboxes
+            if !claims.isEmpty {
+                VStack(spacing: 4) {
+                    ForEach(claims) { claim in
+                        ClaimWithDeliveryRow(
+                            claim: claim,
+                            delivery: deliveries.first { $0.claimId == claim.id },
+                            isOrganizerView: isOrganizerView,
+                            currentUserId: currentUserId,
+                            onToggleDelivery: onToggleDelivery
+                        )
+                    }
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding()
+        .background(totalClaimed > 0 ? Color.bulkSharePrimary.opacity(0.05) : Color.bulkShareBackground)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(totalClaimed > 0 ? Color.bulkSharePrimary.opacity(0.2) : Color.gray.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
+struct ClaimWithDeliveryRow: View {
+    let claim: ItemClaim
+    let delivery: ItemDelivery?
+    let isOrganizerView: Bool
+    let currentUserId: String
+    let onToggleDelivery: (ItemClaim, ItemDelivery?) -> Void
+    @State private var claimerName: String = "Loading..."
+    
+    private var isDelivered: Bool {
+        delivery?.isDelivered ?? false
+    }
+    
+    private var shouldShowForUser: Bool {
+        if isOrganizerView {
+            return true // Organizers see all claims
+        } else {
+            // Participants only see their own claims
+            return claim.claimerUserId == currentUserId
+        }
+    }
+    
+    var body: some View {
+        if shouldShowForUser {
+            HStack {
+                Image(systemName: "person.circle.fill")
+                    .font(.caption)
+                    .foregroundColor(.bulkSharePrimary)
+                
+                if isOrganizerView {
+                    Text("\(claimerName) claimed \(claim.quantityClaimed)")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextMedium)
+                } else {
+                    Text("You claimed \(claim.quantityClaimed)")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextMedium)
+                }
+                
+                Spacer()
+                
+                // Delivery checkbox
+                Button(action: {
+                    onToggleDelivery(claim, delivery)
+                }) {
+                    HStack(spacing: 4) {
                         Image(systemName: isDelivered ? "checkmark.square.fill" : "square")
-                            .font(.title2)
+                            .font(.subheadline)
                             .foregroundColor(isDelivered ? .green : .gray)
                         
-                        Text(checkboxText)
-                            .font(.subheadline)
+                        Text(isOrganizerView ? "Delivered" : "Received")
+                            .font(.caption)
                             .fontWeight(.medium)
                             .foregroundColor(isDelivered ? .green : .bulkShareTextMedium)
                     }
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            
-            // Show delivery timestamp if delivered
-            if isDelivered, let deliveredAt = delivery?.deliveredAt {
-                HStack {
-                    Image(systemName: "clock")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextLight)
-                    
-                    Text("Completed \(deliveredAt, style: .relative)")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextLight)
-                    
-                    Spacer()
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(isDelivered ? Color.green.opacity(0.1) : Color.clear)
+            .cornerRadius(6)
+            .onAppear {
+                if isOrganizerView {
+                    loadClaimerName()
                 }
-            }
-        }
-        .padding()
-        .background(isDelivered ? Color.green.opacity(0.05) : Color.bulkShareBackground)
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isDelivered ? Color.green.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1)
-        )
-        .onAppear {
-            if isOrganizerView {
-                loadClaimerName()
             }
         }
     }
@@ -424,60 +475,8 @@ struct ClaimedItemCard: View {
     }
 }
 
-struct ParticipantItemsSection: View {
-    let trip: Trip
-    let userClaims: [ItemClaim]
-    let deliveries: [ItemDelivery]
-    let onToggleReceived: (ItemClaim, ItemDelivery?) -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("My Items (\(userClaims.count))")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.bulkShareTextDark)
-            
-            if userClaims.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "cart")
-                        .font(.system(size: 40))
-                        .foregroundColor(.bulkShareTextLight)
-                    
-                    Text("No items claimed")
-                        .font(.subheadline)
-                        .foregroundColor(.bulkShareTextMedium)
-                    
-                    Text("You didn't claim any items from this trip")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextLight)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(30)
-                .background(Color.bulkShareBackground)
-                .cornerRadius(12)
-            } else {
-                VStack(spacing: 12) {
-                    ForEach(userClaims) { claim in
-                        if let item = trip.items.first(where: { $0.id == claim.itemId }) {
-                            let delivery = deliveries.first { $0.claimId == claim.id }
-                            ClaimedItemCard(
-                                item: item,
-                                claim: claim,
-                                delivery: delivery,
-                                isOrganizerView: false,
-                                onToggleDelivery: { onToggleReceived(claim, delivery) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
-    }
-}
+
+
 
 
 
