@@ -45,39 +45,27 @@ struct PastTripDetailView: View {
                 PastTripHeader(trip: trip)
                 
                 if isOrganizerView {
-                    // Organizer View: Show all items and delivery status
-                    AllItemsDeliverySection(
+                    // Organizer View: Show all claimed items with delivery checkboxes
+                    OrganizerItemsSection(
                         trip: trip,
                         claims: acceptedClaims,
                         deliveries: deliveries,
-                        onMarkDelivered: { delivery in
-                            selectedDelivery = delivery
-                            showingDeliveryConfirmation = true
+                        onToggleDelivery: { claim, delivery in
+                            handleDeliveryToggle(claim: claim, delivery: delivery)
                         }
                     )
                 } else {
-                    // Participant View: Show their items and delivery status
-                    MyItemsSection(
+                    // Participant View: Show their claimed items with received checkboxes
+                    ParticipantItemsSection(
                         trip: trip,
-                        userDeliveries: userDeliveries,
-                        onMarkReceived: { delivery in
-                            selectedDelivery = delivery
-                            showingDeliveryConfirmation = true
+                        userClaims: acceptedClaims.filter { $0.claimerUserId == currentUserId },
+                        deliveries: deliveries,
+                        onToggleReceived: { claim, delivery in
+                            handleDeliveryToggle(claim: claim, delivery: delivery)
                         }
                     )
                 }
                 
-                // Show items to deliver if user is helping with delivery
-                if !deliveriesToMake.isEmpty && !isOrganizerView {
-                    ItemsToDeliverSection(
-                        deliveries: deliveriesToMake,
-                        trip: trip,
-                        onMarkDelivered: { delivery in
-                            selectedDelivery = delivery
-                            showingDeliveryConfirmation = true
-                        }
-                    )
-                }
                 
                 // Trip Summary
                 TripSummarySection(trip: trip, claims: acceptedClaims)
@@ -92,16 +80,17 @@ struct PastTripDetailView: View {
         .onAppear {
             loadTripData()
         }
-        .alert("Confirm Delivery", isPresented: $showingDeliveryConfirmation) {
+        .alert("Confirm Delivery Status", isPresented: $showingDeliveryConfirmation) {
             Button("Cancel", role: .cancel) { }
-            Button("Mark as Delivered") {
+            Button("Confirm") {
                 if let delivery = selectedDelivery {
-                    markAsDelivered(delivery)
+                    toggleDeliveryStatus(delivery)
                 }
             }
         } message: {
             if let delivery = selectedDelivery {
-                Text("Confirm that this item has been delivered to the recipient?")
+                let action = delivery.isDelivered ? "mark as pending" : "mark as delivered"
+                Text("Do you want to \(action) for this item?")
             }
         }
     }
@@ -129,16 +118,47 @@ struct PastTripDetailView: View {
         }
     }
     
-    private func markAsDelivered(_ delivery: ItemDelivery) {
+    private func handleDeliveryToggle(claim: ItemClaim, delivery: ItemDelivery?) {
+        // If no delivery record exists, create one first
+        if delivery == nil {
+            createDeliveryRecord(for: claim)
+        } else if let existingDelivery = delivery {
+            selectedDelivery = existingDelivery
+            showingDeliveryConfirmation = true
+        }
+    }
+    
+    private func createDeliveryRecord(for claim: ItemClaim) {
+        Task {
+            do {
+                let newDelivery = ItemDelivery.createFromClaim(claim, delivererUserId: trip.shopperId)
+                try await FirebaseManager.shared.createDeliveryRecord(newDelivery)
+                
+                DispatchQueue.main.async {
+                    self.loadTripData() // Refresh to show new delivery record
+                }
+            } catch {
+                print("Error creating delivery record: \(error)")
+            }
+        }
+    }
+    
+    private func toggleDeliveryStatus(_ delivery: ItemDelivery) {
         isLoading = true
         
         Task {
             do {
-                try await FirebaseManager.shared.markItemAsDelivered(
-                    deliveryId: delivery.id,
-                    deliveredAt: Date(),
-                    confirmationNote: "Confirmed by \(FirebaseManager.shared.currentUser?.name ?? "user")"
-                )
+                if delivery.isDelivered {
+                    // Mark as not delivered (reset)
+                    try await FirebaseManager.shared.markItemAsNotDelivered(deliveryId: delivery.id)
+                } else {
+                    // Mark as delivered
+                    try await FirebaseManager.shared.markItemAsDelivered(
+                        deliveryId: delivery.id,
+                        deliveredAt: Date(),
+                        confirmationNote: "Confirmed by \(FirebaseManager.shared.currentUser?.name ?? "user")"
+                    )
+                }
                 
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -148,7 +168,7 @@ struct PastTripDetailView: View {
             } catch {
                 DispatchQueue.main.async {
                     self.isLoading = false
-                    print("Error marking item as delivered: \(error)")
+                    print("Error updating delivery status: \(error)")
                 }
             }
         }
@@ -245,28 +265,32 @@ struct PastTripHeader: View {
     }
 }
 
-struct AllItemsDeliverySection: View {
+struct OrganizerItemsSection: View {
     let trip: Trip
     let claims: [ItemClaim]
     let deliveries: [ItemDelivery]
-    let onMarkDelivered: (ItemDelivery) -> Void
+    let onToggleDelivery: (ItemClaim, ItemDelivery?) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Item Deliveries (\(claims.count) items)")
+            Text("Claimed Items (\(claims.count))")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.bulkShareTextDark)
             
             if claims.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "checkmark.circle")
+                    Image(systemName: "cart")
                         .font(.system(size: 40))
                         .foregroundColor(.bulkShareTextLight)
                     
                     Text("No items were claimed")
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
+                        
+                    Text("This trip had no participants")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextLight)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(30)
@@ -277,11 +301,12 @@ struct AllItemsDeliverySection: View {
                     ForEach(claims) { claim in
                         if let item = trip.items.first(where: { $0.id == claim.itemId }) {
                             let delivery = deliveries.first { $0.claimId == claim.id }
-                            OrganizerItemDeliveryCard(
+                            ClaimedItemCard(
                                 item: item,
                                 claim: claim,
                                 delivery: delivery,
-                                onMarkDelivered: onMarkDelivered
+                                isOrganizerView: true,
+                                onToggleDelivery: { onToggleDelivery(claim, delivery) }
                             )
                         }
                     }
@@ -295,15 +320,20 @@ struct AllItemsDeliverySection: View {
     }
 }
 
-struct OrganizerItemDeliveryCard: View {
+struct ClaimedItemCard: View {
     let item: TripItem
     let claim: ItemClaim
     let delivery: ItemDelivery?
-    let onMarkDelivered: (ItemDelivery) -> Void
+    let isOrganizerView: Bool
+    let onToggleDelivery: () -> Void
     @State private var claimerName: String = "Loading..."
     
     private var isDelivered: Bool {
         delivery?.isDelivered ?? false
+    }
+    
+    private var checkboxText: String {
+        isOrganizerView ? "Delivered" : "Received"
     }
     
     var body: some View {
@@ -315,9 +345,15 @@ struct OrganizerItemDeliveryCard: View {
                         .fontWeight(.medium)
                         .foregroundColor(.bulkShareTextDark)
                     
-                    Text("Claimed by: \(claimerName)")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextMedium)
+                    if isOrganizerView {
+                        Text("Claimed by: \(claimerName)")
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextMedium)
+                    } else {
+                        Text("\(item.category.icon) \(item.category.displayName)")
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextMedium)
+                    }
                     
                     Text("Quantity: \(claim.quantityClaimed)")
                         .font(.caption)
@@ -327,53 +363,48 @@ struct OrganizerItemDeliveryCard: View {
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 4) {
-                    HStack {
-                        Image(systemName: isDelivered ? "checkmark.circle.fill" : "clock.fill")
-                            .foregroundColor(isDelivered ? .green : .orange)
+                // Checkbox for delivery status
+                Button(action: onToggleDelivery) {
+                    HStack(spacing: 8) {
+                        Image(systemName: isDelivered ? "checkmark.square.fill" : "square")
+                            .font(.title2)
+                            .foregroundColor(isDelivered ? .green : .gray)
                         
-                        Text(isDelivered ? "Delivered" : "Pending")
-                            .font(.caption)
+                        Text(checkboxText)
+                            .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(isDelivered ? .green : .orange)
-                    }
-                    
-                    if let deliveredAt = delivery?.deliveredAt {
-                        Text(deliveredAt, style: .relative)
-                            .font(.caption)
-                            .foregroundColor(.bulkShareTextLight)
+                            .foregroundColor(isDelivered ? .green : .bulkShareTextMedium)
                     }
                 }
+                .buttonStyle(PlainButtonStyle())
             }
             
-            // Mark as delivered button (only if not delivered and there's a delivery record)
-            if !isDelivered, let deliveryRecord = delivery {
-                Button(action: {
-                    onMarkDelivered(deliveryRecord)
-                }) {
-                    HStack {
-                        Image(systemName: "checkmark.circle")
-                        Text("Mark as Delivered")
-                    }
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 40)
-                    .background(Color.bulkSharePrimary)
-                    .cornerRadius(8)
+            // Show delivery timestamp if delivered
+            if isDelivered, let deliveredAt = delivery?.deliveredAt {
+                HStack {
+                    Image(systemName: "clock")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextLight)
+                    
+                    Text("Completed \(deliveredAt, style: .relative)")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextLight)
+                    
+                    Spacer()
                 }
             }
         }
         .padding()
-        .background(isDelivered ? Color.green.opacity(0.05) : Color.orange.opacity(0.05))
+        .background(isDelivered ? Color.green.opacity(0.05) : Color.bulkShareBackground)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isDelivered ? Color.green : Color.orange, lineWidth: 1)
+                .stroke(isDelivered ? Color.green.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1)
         )
         .onAppear {
-            loadClaimerName()
+            if isOrganizerView {
+                loadClaimerName()
+            }
         }
     }
     
@@ -393,19 +424,20 @@ struct OrganizerItemDeliveryCard: View {
     }
 }
 
-struct MyItemsSection: View {
+struct ParticipantItemsSection: View {
     let trip: Trip
-    let userDeliveries: [ItemDelivery]
-    let onMarkReceived: (ItemDelivery) -> Void
+    let userClaims: [ItemClaim]
+    let deliveries: [ItemDelivery]
+    let onToggleReceived: (ItemClaim, ItemDelivery?) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("My Items (\(userDeliveries.count))")
+            Text("My Items (\(userClaims.count))")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.bulkShareTextDark)
             
-            if userDeliveries.isEmpty {
+            if userClaims.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "cart")
                         .font(.system(size: 40))
@@ -425,12 +457,15 @@ struct MyItemsSection: View {
                 .cornerRadius(12)
             } else {
                 VStack(spacing: 12) {
-                    ForEach(userDeliveries) { delivery in
-                        if let item = trip.items.first(where: { $0.id == delivery.itemId }) {
-                            UserItemDeliveryCard(
+                    ForEach(userClaims) { claim in
+                        if let item = trip.items.first(where: { $0.id == claim.itemId }) {
+                            let delivery = deliveries.first { $0.claimId == claim.id }
+                            ClaimedItemCard(
                                 item: item,
+                                claim: claim,
                                 delivery: delivery,
-                                onMarkReceived: onMarkReceived
+                                isOrganizerView: false,
+                                onToggleDelivery: { onToggleReceived(claim, delivery) }
                             )
                         }
                     }
@@ -444,215 +479,7 @@ struct MyItemsSection: View {
     }
 }
 
-struct UserItemDeliveryCard: View {
-    let item: TripItem
-    let delivery: ItemDelivery
-    let onMarkReceived: (ItemDelivery) -> Void
-    @State private var delivererName: String = "Loading..."
-    
-    private var quantityClaimed: Int {
-        // We need to get this from the claim, but for now we'll show it as 1
-        // In a real implementation, we'd pass the claim or fetch it
-        1
-    }
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.bulkShareTextDark)
-                    
-                    Text("\(item.category.icon) \(item.category.displayName)")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextMedium)
-                    
-                    Text("Delivered by: \(delivererName)")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextMedium)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    HStack {
-                        Image(systemName: delivery.isDelivered ? "checkmark.circle.fill" : "clock.fill")
-                            .foregroundColor(delivery.isDelivered ? .green : .orange)
-                        
-                        Text(delivery.isDelivered ? "Received" : "Pending")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(delivery.isDelivered ? .green : .orange)
-                    }
-                    
-                    if let deliveredAt = delivery.deliveredAt {
-                        Text(deliveredAt, style: .relative)
-                            .font(.caption)
-                            .foregroundColor(.bulkShareTextLight)
-                    }
-                }
-            }
-            
-            // Mark as received button (only if not delivered yet)
-            if !delivery.isDelivered {
-                Button(action: {
-                    onMarkReceived(delivery)
-                }) {
-                    HStack {
-                        Image(systemName: "checkmark.circle")
-                        Text("Mark as Received")
-                    }
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 40)
-                    .background(Color.bulkShareSuccess)
-                    .cornerRadius(8)
-                }
-            }
-        }
-        .padding()
-        .background(delivery.isDelivered ? Color.green.opacity(0.05) : Color.orange.opacity(0.05))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(delivery.isDelivered ? Color.green : Color.orange, lineWidth: 1)
-        )
-        .onAppear {
-            loadDelivererName()
-        }
-    }
-    
-    private func loadDelivererName() {
-        Task {
-            do {
-                let user = try await FirebaseManager.shared.getUser(uid: delivery.delivererUserId)
-                DispatchQueue.main.async {
-                    self.delivererName = user.name
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.delivererName = "Unknown User"
-                }
-            }
-        }
-    }
-}
 
-struct ItemsToDeliverSection: View {
-    let deliveries: [ItemDelivery]
-    let trip: Trip
-    let onMarkDelivered: (ItemDelivery) -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Items to Deliver (\(deliveries.count))")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.bulkShareTextDark)
-            
-            VStack(spacing: 12) {
-                ForEach(deliveries) { delivery in
-                    if let item = trip.items.first(where: { $0.id == delivery.itemId }) {
-                        DeliveryTaskCard(
-                            item: item,
-                            delivery: delivery,
-                            onMarkDelivered: onMarkDelivered
-                        )
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
-    }
-}
-
-struct DeliveryTaskCard: View {
-    let item: TripItem
-    let delivery: ItemDelivery
-    let onMarkDelivered: (ItemDelivery) -> Void
-    @State private var receiverName: String = "Loading..."
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.bulkShareTextDark)
-                    
-                    Text("Deliver to: \(receiverName)")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextMedium)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    HStack {
-                        Image(systemName: delivery.isDelivered ? "checkmark.circle.fill" : "clock.fill")
-                            .foregroundColor(delivery.isDelivered ? .green : .orange)
-                        
-                        Text(delivery.isDelivered ? "Delivered" : "Pending")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(delivery.isDelivered ? .green : .orange)
-                    }
-                }
-            }
-            
-            if !delivery.isDelivered {
-                Button(action: {
-                    onMarkDelivered(delivery)
-                }) {
-                    HStack {
-                        Image(systemName: "checkmark.circle")
-                        Text("Mark as Delivered")
-                    }
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 40)
-                    .background(Color.bulkSharePrimary)
-                    .cornerRadius(8)
-                }
-            }
-        }
-        .padding()
-        .background(delivery.isDelivered ? Color.green.opacity(0.05) : Color.blue.opacity(0.05))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(delivery.isDelivered ? Color.green : Color.blue, lineWidth: 1)
-        )
-        .onAppear {
-            loadReceiverName()
-        }
-    }
-    
-    private func loadReceiverName() {
-        Task {
-            do {
-                let user = try await FirebaseManager.shared.getUser(uid: delivery.receiverUserId)
-                DispatchQueue.main.async {
-                    self.receiverName = user.name
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.receiverName = "Unknown User"
-                }
-            }
-        }
-    }
-}
 
 struct TripSummarySection: View {
     let trip: Trip

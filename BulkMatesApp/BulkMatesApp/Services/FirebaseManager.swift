@@ -873,6 +873,23 @@ class FirebaseManager: ObservableObject {
         try await firestore.collection("deliveries").document(deliveryId).updateData(updateData)
     }
     
+    func markItemAsNotDelivered(deliveryId: String) async throws {
+        try await firestore.collection("deliveries").document(deliveryId).updateData([
+            "isDelivered": false,
+            "deliveredAt": FieldValue.delete(),
+            "confirmationNote": FieldValue.delete()
+        ])
+    }
+    
+    func createDeliveryRecord(_ delivery: ItemDelivery) async throws {
+        do {
+            let deliveryData = try Firestore.Encoder().encode(delivery)
+            try await firestore.collection("deliveries").document(delivery.id).setData(deliveryData)
+        } catch {
+            throw error
+        }
+    }
+    
     func autoCreateDeliveryRecordsForCompletedTrip(tripId: String) async throws {
         // Get all accepted claims for this trip
         let claims = try await getTripClaims(tripId: tripId)
