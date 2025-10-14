@@ -27,6 +27,7 @@ extension Color {
     static let bulkMatesWarning = Color(hex: "ffc107")
     static let bulkMatesError = Color(hex: "dc3545")
     static let bulkMatesInfo = Color(hex: "17a2b8")
+    static let bulkMatesBorder = Color(hex: "e9ecef")
     
     // MARK: - Legacy BulkShare Colors (for backward compatibility)
     static let bulkSharePrimary = bulkMatesPrimary
@@ -39,6 +40,7 @@ extension Color {
     static let bulkShareWarning = bulkMatesWarning
     static let bulkShareError = bulkMatesError
     static let bulkShareInfo = bulkMatesInfo
+    static let bulkShareBorder = bulkMatesBorder
 }
 
 // MARK: - Color Extension for Hex Support

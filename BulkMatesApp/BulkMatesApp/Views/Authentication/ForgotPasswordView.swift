@@ -17,11 +17,32 @@ import SwiftUI
 
 struct ForgotPasswordView: View {
     @State private var email: String = ""
+    @State private var selectedMethod: ResetMethod = .email
     @State private var isLoading: Bool = false
     @State private var showingAlert: Bool = false
     @State private var alertTitle: String = ""
     @State private var alertMessage: String = ""
+    @State private var showingPhoneVerification: Bool = false
     @Environment(\.dismiss) private var dismiss
+    
+    enum ResetMethod: String, CaseIterable {
+        case email = "Email"
+        case phone = "Phone"
+        
+        var icon: String {
+            switch self {
+            case .email: return "envelope.fill"
+            case .phone: return "phone.fill"
+            }
+        }
+        
+        var description: String {
+            switch self {
+            case .email: return "We'll email you a reset link"
+            case .phone: return "We'll send a code to your phone"
+            }
+        }
+    }
     
     var body: some View {
         ZStack {
@@ -51,8 +72,9 @@ struct ForgotPasswordView: View {
                                 .fill(Color.white.opacity(0.2))
                                 .frame(width: 100, height: 100)
                             
-                            Text("🔑")
-                                .font(.system(size: 50))
+                            Image(systemName: selectedMethod.icon)
+                                .font(.system(size: 40))
+                                .foregroundColor(.white)
                         }
                         
                         // Title
@@ -61,7 +83,7 @@ struct ForgotPasswordView: View {
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                         
-                        Text("We'll email you a reset link")
+                        Text(selectedMethod.description)
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.9))
                             .multilineTextAlignment(.center)
@@ -70,48 +92,97 @@ struct ForgotPasswordView: View {
                     // Reset Form
                     AuthFormCard {
                         VStack(spacing: 24) {
-                            // Instructions
-                            VStack(spacing: 8) {
-                                Text("Enter your email address and we'll send you a link to reset your password.")
-                                    .font(.subheadline)
-                                    .foregroundColor(.bulkShareTextMedium)
-                                    .multilineTextAlignment(.center)
-                            }
-                            
-                            // Email Field
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Email Address")
+                            // Method Selection
+                            VStack(spacing: 12) {
+                                Text("Choose reset method")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
-                                    .foregroundColor(.bulkShareTextMedium)
+                                    .foregroundColor(.bulkShareTextDark)
                                 
-                                TextField("Enter your email", text: $email)
-                                    .textFieldStyle(BulkShareTextFieldStyle())
-                                    .keyboardType(.emailAddress)
-                                    .autocapitalization(.none)
-                                    .autocorrectionDisabled()
-                            }
-                            
-                            // Send Reset Link Button
-                            Button(action: handlePasswordReset) {
-                                HStack {
-                                    if isLoading {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                            .scaleEffect(0.8)
-                                    } else {
-                                        Text("Send Reset Link")
-                                            .fontWeight(.semibold)
+                                HStack(spacing: 0) {
+                                    ForEach(ResetMethod.allCases, id: \.self) { method in
+                                        Button(action: { selectedMethod = method }) {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: method.icon)
+                                                Text(method.rawValue)
+                                                    .fontWeight(.medium)
+                                            }
+                                            .font(.subheadline)
+                                            .foregroundColor(selectedMethod == method ? .white : .bulkShareTextMedium)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 12)
+                                            .background(
+                                                selectedMethod == method ? 
+                                                Color.bulkSharePrimary : Color.clear
+                                            )
+                                        }
                                     }
                                 }
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(Color.bulkSharePrimary)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                                .background(Color.bulkShareBackground)
+                                .cornerRadius(8)
                             }
-                            .disabled(isLoading || email.isEmpty || !isValidEmail(email))
-                            .opacity(email.isEmpty || !isValidEmail(email) ? 0.6 : 1.0)
+                            
+                            // Instructions
+                            VStack(spacing: 8) {
+                                Text(selectedMethod == .email ? 
+                                    "Enter your email address and we'll send you a link to reset your password." :
+                                    "We'll send a verification code to your phone number to reset your password."
+                                )
+                                .font(.subheadline)
+                                .foregroundColor(.bulkShareTextMedium)
+                                .multilineTextAlignment(.center)
+                            }
+                            
+                            if selectedMethod == .email {
+                                // Email Field
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Email Address")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.bulkShareTextMedium)
+                                    
+                                    TextField("Enter your email", text: $email)
+                                        .textFieldStyle(BulkShareTextFieldStyle())
+                                        .keyboardType(.emailAddress)
+                                        .autocapitalization(.none)
+                                        .autocorrectionDisabled()
+                                }
+                                
+                                // Send Reset Link Button
+                                Button(action: handlePasswordReset) {
+                                    HStack {
+                                        if isLoading {
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                                .scaleEffect(0.8)
+                                        } else {
+                                            Text("Send Reset Link")
+                                                .fontWeight(.semibold)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                                    .background(Color.bulkSharePrimary)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                }
+                                .disabled(isLoading || email.isEmpty || !isValidEmail(email))
+                                .opacity(email.isEmpty || !isValidEmail(email) ? 0.6 : 1.0)
+                            } else {
+                                // Phone Verification Button
+                                Button(action: { showingPhoneVerification = true }) {
+                                    HStack {
+                                        Image(systemName: "phone.fill")
+                                        Text("Verify Phone Number")
+                                            .fontWeight(.semibold)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                                    .background(Color.bulkSharePrimary)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                }
+                            }
                             
                             // Back to Login Link
                             HStack {
@@ -146,12 +217,27 @@ struct ForgotPasswordView: View {
         }
         .alert(alertTitle, isPresented: $showingAlert) {
             Button("OK", role: .cancel) {
-                if alertTitle == "Reset Link Sent" {
+                if alertTitle == "Reset Link Sent" || alertTitle == "Password Reset Sent" {
                     dismiss()
                 }
             }
         } message: {
             Text(alertMessage)
+        }
+        .sheet(isPresented: $showingPhoneVerification) {
+            PhoneVerificationView(
+                purpose: .passwordReset,
+                onSuccess: {
+                    showingPhoneVerification = false
+                    showAlert(
+                        title: "Password Reset Sent",
+                        message: "A password reset link has been sent to your email address."
+                    )
+                },
+                onCancel: {
+                    showingPhoneVerification = false
+                }
+            )
         }
     }
     

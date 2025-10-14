@@ -9,6 +9,7 @@ import Foundation
 import Firebase
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseFunctions
 
 class FirebaseManager: ObservableObject {
     static let shared = FirebaseManager()
@@ -922,6 +923,145 @@ class FirebaseManager: ObservableObject {
             try await autoCreateDeliveryRecordsForCompletedTrip(tripId: tripId)
         }
     }
+    
+    // MARK: - Phone Verification Methods
+    
+    struct PhoneVerificationResult {
+        let verificationID: String
+        let attemptsRemaining: Int
+        let resetTime: Int?
+    }
+    
+    func sendPhoneVerification(phoneNumber: String) async throws -> PhoneVerificationResult {
+        // First check rate limits with Cloud Function
+        let functions = Functions.functions()
+        let checkRateLimit = functions.httpsCallable("checkSMSRateLimit")
+        
+        do {
+            let rateLimitResult = try await checkRateLimit.call(["phoneNumber": phoneNumber])
+            
+            guard let data = rateLimitResult.data as? [String: Any],
+                  let allowed = data["allowed"] as? Bool else {
+                throw PhoneVerificationError.rateLimitCheckFailed
+            }
+            
+            if !allowed {
+                let message = data["message"] as? String ?? "Rate limit exceeded"
+                let resetTime = data["resetTime"] as? Int
+                throw PhoneVerificationError.rateLimitExceeded(message: message, resetTime: resetTime)
+            }
+            
+            let attemptsRemaining = data["attemptsRemaining"] as? Int ?? 0
+            let resetTime = data["resetTime"] as? Int
+            
+            // Rate limit check passed, send SMS
+            let verificationID = try await PhoneAuthProvider.provider().verifyPhoneNumber(
+                phoneNumber, 
+                uiDelegate: nil
+            )
+            
+            return PhoneVerificationResult(
+                verificationID: verificationID,
+                attemptsRemaining: attemptsRemaining,
+                resetTime: resetTime
+            )
+            
+        } catch let error as NSError {
+            if error.domain == FunctionsErrorDomain {
+                if let message = (error.userInfo[FunctionsErrorDetailsKey] as? [String: Any])?["message"] as? String {
+                    throw PhoneVerificationError.rateLimitExceeded(message: message, resetTime: nil)
+                }
+            }
+            throw PhoneVerificationError.sendFailed(error.localizedDescription)
+        }
+    }
+    
+    func verifyPhoneCode(
+        verificationID: String, 
+        verificationCode: String, 
+        purpose: PhoneVerificationView.VerificationPurpose
+    ) async throws {
+        let credential = PhoneAuthProvider.provider().credential(
+            withVerificationID: verificationID,
+            verificationCode: verificationCode
+        )
+        
+        switch purpose {
+        case .passwordReset:
+            try await handlePasswordResetVerification(credential: credential)
+        case .phoneLogin:
+            try await handlePhoneLogin(credential: credential)
+        case .changePhoneNumber:
+            try await handlePhoneNumberChange(credential: credential)
+        }
+    }
+    
+    private func handlePasswordResetVerification(credential: PhoneAuthCredential) async throws {
+        // For password reset, we don't actually sign in with the phone credential
+        // We just verify the phone number belongs to the user
+        
+        // Try to sign in temporarily to verify the credential is valid
+        let authResult = try await auth.signIn(with: credential)
+        let phoneNumber = authResult.user.phoneNumber
+        
+        // Sign out the temporary session
+        try auth.signOut()
+        
+        // Find user by phone number and send email reset
+        guard let phoneNumber = phoneNumber else {
+            throw PhoneVerificationError.verificationFailed
+        }
+        
+        // Query users collection to find user with this phone number
+        let usersQuery = firestore.collection("users")
+            .whereField("phoneNumber", isEqualTo: phoneNumber)
+            .limit(to: 1)
+        
+        let snapshot = try await usersQuery.getDocuments()
+        
+        guard let document = snapshot.documents.first,
+              let userData = try? document.data(as: User.self),
+              !userData.email.isEmpty else {
+            throw PhoneVerificationError.userNotFound
+        }
+        
+        // Send password reset email
+        try await auth.sendPasswordReset(withEmail: userData.email)
+    }
+    
+    private func handlePhoneLogin(credential: PhoneAuthCredential) async throws {
+        let authResult = try await auth.signIn(with: credential)
+        let firebaseUser = authResult.user
+        
+        // Check if user exists in our database
+        let userDoc = try await firestore.collection("users").document(firebaseUser.uid).getDocument()
+        
+        if !userDoc.exists {
+            throw PhoneVerificationError.userNotFound
+        }
+        
+        // Load user data
+        try await loadCurrentUser(uid: firebaseUser.uid)
+    }
+    
+    private func handlePhoneNumberChange(credential: PhoneAuthCredential) async throws {
+        guard let firebaseUser = auth.currentUser else {
+            throw AuthError.noCurrentUser
+        }
+        
+        // Update phone number in Firebase Auth
+        try await firebaseUser.updatePhoneNumber(credential)
+        
+        // Update phone number in Firestore - get from Firebase user after update
+        if let phoneNumber = firebaseUser.phoneNumber {
+            try await firestore.collection("users").document(firebaseUser.uid).updateData([
+                "phoneNumber": phoneNumber
+            ])
+            
+            // Reload current user to reflect changes
+            try await loadCurrentUser(uid: firebaseUser.uid)
+        }
+    }
 }
 
 // MARK: - Custom Errors
@@ -944,6 +1084,29 @@ enum FirestoreError: LocalizedError {
         switch self {
         case .documentNotFound:
             return "Document not found"
+        }
+    }
+}
+
+enum PhoneVerificationError: LocalizedError {
+    case rateLimitCheckFailed
+    case rateLimitExceeded(message: String, resetTime: Int?)
+    case sendFailed(String)
+    case verificationFailed
+    case userNotFound
+    
+    var errorDescription: String? {
+        switch self {
+        case .rateLimitCheckFailed:
+            return "Unable to check rate limits"
+        case .rateLimitExceeded(let message, _):
+            return message
+        case .sendFailed(let message):
+            return "Failed to send verification: \(message)"
+        case .verificationFailed:
+            return "Phone verification failed"
+        case .userNotFound:
+            return "No account found with this phone number"
         }
     }
 }
