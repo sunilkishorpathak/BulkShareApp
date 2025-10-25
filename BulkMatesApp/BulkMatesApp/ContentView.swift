@@ -34,27 +34,36 @@ struct ContentView: View {
                     
                     // App Logo and Branding
                     VStack(spacing: 20) {
-                        // Logo
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.2))
-                                .frame(width: 120, height: 120)
-                            
-                            Text("🍃")
-                                .font(.system(size: 60))
-                        }
+                        // Logo - Circle of Friends App Icon
+                        Image("SplashIcon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 180, height: 180)
+                            .clipShape(RoundedRectangle(cornerRadius: 40))
+                            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 10)
                         
                         // App Name
                         Text("BulkMates")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
-                        
+                            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 2)
+
                         // Tagline
-                        Text("Share Smarter, Waste Less")
-                            .font(.title3)
-                            .foregroundColor(.white.opacity(0.9))
+                        Text("Plan Together, Achieve More")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundColor(.white.opacity(0.95))
                             .multilineTextAlignment(.center)
+                            .padding(.top, 8)
+
+                        // Use Case Icons
+                        HStack(spacing: 20) {
+                            UseCaseIconView(emoji: "🛒", label: "Shop")
+                            UseCaseIconView(emoji: "🎉", label: "Events")
+                            UseCaseIconView(emoji: "⛺", label: "Trips")
+                            UseCaseIconView(emoji: "🍽️", label: "Potlucks")
+                        }
+                        .padding(.top, 30)
                     }
                     
                     Spacer()
@@ -88,13 +97,14 @@ struct ContentView: View {
                     
                     // Footer
                     VStack(spacing: 8) {
-                        Text("Reduce waste • Save money • Build community")
-                            .font(.caption)
+                        Text("Join groups • Share costs • Plan events • Build community")
+                            .font(.system(size: 14))
                             .foregroundColor(.white.opacity(0.7))
                             .multilineTextAlignment(.center)
-                        
-                        Text("v1.0.0")
-                            .font(.caption2)
+                            .padding(.top, 20)
+
+                        Text("v1.1.0")
+                            .font(.system(size: 12))
                             .foregroundColor(.white.opacity(0.5))
                     }
                     .padding(.bottom, 50)
@@ -119,7 +129,7 @@ struct ContentView: View {
 // MARK: - Floating Background Elements (keep existing)
 struct FloatingElementsView: View {
     @State private var animate = false
-    
+
     var body: some View {
         ZStack {
             ForEach(0..<6, id: \.self) { index in
@@ -140,6 +150,29 @@ struct FloatingElementsView: View {
         }
         .onAppear {
             animate = true
+        }
+    }
+}
+
+// MARK: - Use Case Icon View
+struct UseCaseIconView: View {
+    let emoji: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(width: 56, height: 56)
+
+                Text(emoji)
+                    .font(.system(size: 32))
+            }
+
+            Text(label)
+                .font(.system(size: 13))
+                .foregroundColor(.white)
         }
     }
 }
