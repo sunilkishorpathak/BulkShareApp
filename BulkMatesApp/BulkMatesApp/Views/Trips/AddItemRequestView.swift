@@ -34,8 +34,8 @@ struct AddItemRequestView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.bulkShareTextDark)
-                        
-                        Text("Ask the trip organizer to add an item you need")
+
+                        Text("Ask the plan organizer to add an item you need")
                             .font(.subheadline)
                             .foregroundColor(.bulkShareTextMedium)
                             .multilineTextAlignment(.center)

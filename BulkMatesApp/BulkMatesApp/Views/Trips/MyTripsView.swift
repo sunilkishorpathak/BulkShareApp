@@ -17,6 +17,7 @@ import SwiftUI
 
 struct MyTripsView: View {
     @State private var selectedTab: TripTab = .upcoming
+    @State private var selectedTripType: TripTypeFilter = .all
     @State private var upcomingTrips: [Trip] = []
     @State private var pastTrips: [Trip] = []
     @State private var hostingTrips: [Trip] = []
@@ -24,10 +25,39 @@ struct MyTripsView: View {
     @State private var showingTripFlow = false
     @State private var tripFlowState: TripFlowState = .groupSelection
     @State private var selectedGroup: Group?
+
+    enum TripTypeFilter: String, CaseIterable {
+        case all = "All Plans"
+        case bulkShopping = "Bulk Shopping"
+        case eventPlanning = "Events"
+        case groupTrip = "Group Trips"
+        case potluckMeal = "Potlucks"
+
+        var tripType: TripType? {
+            switch self {
+            case .all: return nil
+            case .bulkShopping: return .bulkShopping
+            case .eventPlanning: return .eventPlanning
+            case .groupTrip: return .groupTrip
+            case .potluckMeal: return .potluckMeal
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .all: return "square.grid.2x2"
+            case .bulkShopping: return "cart.fill"
+            case .eventPlanning: return "party.popper.fill"
+            case .groupTrip: return "figure.hiking"
+            case .potluckMeal: return "fork.knife"
+            }
+        }
+    }
     
     enum TripFlowState {
         case groupSelection
-        case createTrip(Group)
+        case tripTypeSelection(Group)
+        case createTrip(Group, TripType)
     }
     
     enum TripTab: String, CaseIterable {
@@ -35,26 +65,45 @@ struct MyTripsView: View {
         case past = "Past"
         case hosting = "Hosting"
     }
-    
+
+    // Filtered trips based on selected type
+    var filteredUpcomingTrips: [Trip] {
+        guard let tripType = selectedTripType.tripType else { return upcomingTrips }
+        return upcomingTrips.filter { $0.tripType == tripType }
+    }
+
+    var filteredPastTrips: [Trip] {
+        guard let tripType = selectedTripType.tripType else { return pastTrips }
+        return pastTrips.filter { $0.tripType == tripType }
+    }
+
+    var filteredHostingTrips: [Trip] {
+        guard let tripType = selectedTripType.tripType else { return hostingTrips }
+        return hostingTrips.filter { $0.tripType == tripType }
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
                 VStack(spacing: 0) {
                     // Custom Tab Bar
                     TripTabBar(selectedTab: $selectedTab)
-                    
+
+                    // Trip Type Filters
+                    TripTypeFilterBar(selectedFilter: $selectedTripType)
+
                     // Content
                     TabView(selection: $selectedTab) {
                         // Upcoming Trips
-                        UpcomingTripsView(trips: upcomingTrips)
+                        UpcomingTripsView(trips: filteredUpcomingTrips, selectedFilter: selectedTripType)
                             .tag(TripTab.upcoming)
-                        
+
                         // Past Trips
-                        PastTripsView(trips: pastTrips)
+                        PastTripsView(trips: filteredPastTrips, selectedFilter: selectedTripType)
                             .tag(TripTab.past)
-                        
+
                         // Hosting Trips
-                        HostingTripsView(trips: hostingTrips)
+                        HostingTripsView(trips: filteredHostingTrips, selectedFilter: selectedTripType)
                             .tag(TripTab.hosting)
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
@@ -75,7 +124,7 @@ struct MyTripsView: View {
                     }
                 }
             }
-            .navigationTitle("My Trips")
+            .navigationTitle("My Plans")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showingTripFlow, onDismiss: {
                 // Refresh trips when sheet is dismissed
@@ -84,10 +133,14 @@ struct MyTripsView: View {
                 switch tripFlowState {
                 case .groupSelection:
                     GroupSelectionView { group in
-                        tripFlowState = .createTrip(group)
+                        tripFlowState = .tripTypeSelection(group)
                     }
-                case .createTrip(let group):
-                    CreateTripView(group: group)
+                case .tripTypeSelection(let group):
+                    TripTypeSelectionView(group: group) { tripType in
+                        tripFlowState = .createTrip(group, tripType)
+                    }
+                case .createTrip(let group, let tripType):
+                    CreateTripView(group: group, tripType: tripType)
                 }
             }
             .onAppear {
@@ -167,17 +220,74 @@ struct TripTabBar: View {
     }
 }
 
+struct TripTypeFilterBar: View {
+    @Binding var selectedFilter: MyTripsView.TripTypeFilter
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(MyTripsView.TripTypeFilter.allCases, id: \.self) { filter in
+                    FilterChip(
+                        filter: filter,
+                        isSelected: selectedFilter == filter,
+                        onTap: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedFilter = filter
+                            }
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+        }
+        .background(Color.white)
+    }
+}
+
+struct FilterChip: View {
+    let filter: MyTripsView.TripTypeFilter
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 6) {
+                Image(systemName: filter.icon)
+                    .font(.caption)
+                Text(filter.rawValue)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            .foregroundColor(isSelected ? .white : .bulkShareTextMedium)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(isSelected ? Color.bulkSharePrimary : Color.bulkShareBackground)
+            .cornerRadius(20)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
 struct UpcomingTripsView: View {
     let trips: [Trip]
-    
+    let selectedFilter: MyTripsView.TripTypeFilter
+
+    var emptyState: (String, String) {
+        if let tripType = selectedFilter.tripType {
+            return (tripType.emptyStateMessage, tripType.emptyStateSubtitle)
+        }
+        return ("No Upcoming Plans", "Join or create plans to start bulk sharing")
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 if trips.isEmpty {
                     EmptyTripsView(
                         icon: "calendar.badge.plus",
-                        title: "No Upcoming Trips",
-                        subtitle: "Join or create trips to start bulk sharing"
+                        title: emptyState.0,
+                        subtitle: emptyState.1
                     )
                 } else {
                     ForEach(trips) { trip in
@@ -196,15 +306,23 @@ struct UpcomingTripsView: View {
 
 struct PastTripsView: View {
     let trips: [Trip]
-    
+    let selectedFilter: MyTripsView.TripTypeFilter
+
+    var emptyState: (String, String) {
+        if let tripType = selectedFilter.tripType {
+            return ("No past \(tripType.displayName.lowercased()) plans", tripType.emptyStateSubtitle)
+        }
+        return ("No Past Plans", "Your completed plans will appear here")
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 if trips.isEmpty {
                     EmptyTripsView(
                         icon: "clock",
-                        title: "No Past Trips",
-                        subtitle: "Your completed trips will appear here"
+                        title: emptyState.0,
+                        subtitle: emptyState.1
                     )
                 } else {
                     ForEach(trips) { trip in
@@ -223,15 +341,23 @@ struct PastTripsView: View {
 
 struct HostingTripsView: View {
     let trips: [Trip]
-    
+    let selectedFilter: MyTripsView.TripTypeFilter
+
+    var emptyState: (String, String) {
+        if let tripType = selectedFilter.tripType {
+            return ("No \(tripType.displayName.lowercased()) plans", tripType.emptyStateSubtitle)
+        }
+        return ("No Hosting Plans", "Create a plan to start hosting for your group")
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 if trips.isEmpty {
                     EmptyTripsView(
                         icon: "person.badge.plus",
-                        title: "No Hosting Trips",
-                        subtitle: "Create a trip to start hosting for your group"
+                        title: emptyState.0,
+                        subtitle: emptyState.1
                     )
                 } else {
                     ForEach(trips) { trip in
@@ -247,50 +373,71 @@ struct HostingTripsView: View {
 
 struct UpcomingTripCard: View {
     let trip: Trip
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack {
-                Text("\(trip.store.icon) \(trip.store.displayName)")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.bulkShareTextDark)
-                
+            // Header with Trip Type
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    // Trip Type Badge
+                    HStack(spacing: 4) {
+                        Text(trip.tripType.icon)
+                            .font(.caption)
+                        Text(trip.tripType.displayName)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(trip.tripType.accentColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(trip.tripType.accentColor.opacity(0.1))
+                    .cornerRadius(8)
+
+                    // Store/Location
+                    Text("\(trip.store.icon) \(trip.store.displayName)")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.bulkShareTextDark)
+                }
+
                 Spacer()
-                
+
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(trip.scheduledDate, style: .time)
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(.bulkSharePrimary)
-                    
+                        .foregroundColor(trip.tripType.accentColor)
+
                     Text(trip.scheduledDate, style: .relative)
                         .font(.caption)
                         .foregroundColor(.bulkShareTextLight)
                 }
             }
-            
+
             // Items
             Text("\(trip.items.count) items shared")
                 .font(.subheadline)
                 .foregroundColor(.bulkShareTextMedium)
-            
+
             // Status
             HStack {
                 Label("\(trip.participantCount) joined", systemImage: "person.3.fill")
                     .font(.caption)
                     .foregroundColor(.bulkShareInfo)
-                
+
                 Spacer()
-                
-                Badge(text: "Upcoming", color: .bulkSharePrimary)
+
+                Badge(text: "Upcoming", color: trip.tripType.accentColor)
             }
         }
         .padding()
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(trip.tripType.accentColor.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 
@@ -418,7 +565,7 @@ struct FloatingCreateTripButton: View {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
                     .font(.system(size: 16, weight: .semibold))
-                Text("Create Trip")
+                Text("Create Plan")
                     .font(.system(size: 16, weight: .semibold))
             }
             .foregroundColor(.white)
@@ -457,7 +604,7 @@ struct GroupSelectionView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.bulkShareTextDark)
                     
-                    Text("Choose which group to create a trip for")
+                    Text("Choose which group to create a plan for")
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
                         .multilineTextAlignment(.center)
@@ -486,7 +633,7 @@ struct GroupSelectionView: View {
                             .font(.headline)
                             .foregroundColor(.bulkShareTextDark)
                         
-                        Text("Create a group first to start planning trips")
+                        Text("Create a group first to start planning")
                             .font(.subheadline)
                             .foregroundColor(.bulkShareTextMedium)
                             .multilineTextAlignment(.center)
@@ -508,7 +655,7 @@ struct GroupSelectionView: View {
                 Spacer()
             }
             .background(Color.bulkShareBackground.ignoresSafeArea())
-            .navigationTitle("Create Trip")
+            .navigationTitle("Create Plan")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

@@ -26,11 +26,11 @@ struct MainTabView: View {
                     Text("Browse")
                 }
             
-            // My Trips Tab
+            // My Plans Tab
             MyTripsView()
                 .tabItem {
                     Image(systemName: "cart.fill")
-                    Text("My Trips")
+                    Text("My Plans")
                 }
             
             // Notifications Tab

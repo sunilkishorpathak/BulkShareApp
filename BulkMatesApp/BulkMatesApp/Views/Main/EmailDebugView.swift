@@ -184,7 +184,7 @@ enum EmailType {
         switch self {
         case .welcome: return "Welcome"
         case .groupInvitation: return "Group Invitation"
-        case .tripNotification: return "Trip Notification"
+        case .tripNotification: return "Plan Notification"
         case .passwordReset: return "Password Reset"
         }
     }

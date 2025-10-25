@@ -44,9 +44,9 @@ struct PastTripDetailView: View {
                 // Trip Header (similar to TripDetailView but read-only)
                 PastTripHeader(trip: trip)
                 
-                // Show Original Trip Items (what was planned)
+                // Show Original Plan Items (what was planned)
                 TripItemsListSection(
-                    title: "Trip Items (\(trip.items.count))",
+                    title: "Plan Items (\(trip.items.count))",
                     items: trip.items,
                     claims: acceptedClaims,
                     deliveries: deliveries,
@@ -68,7 +68,7 @@ struct PastTripDetailView: View {
             .padding()
         }
         .background(Color.bulkShareBackground.ignoresSafeArea())
-        .navigationTitle("Trip Details")
+        .navigationTitle("Plan Details")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             loadTripData()
@@ -223,8 +223,8 @@ struct PastTripHeader: View {
                 }
                 
                 Spacer()
-                
-                Text("Trip completed")
+
+                Text("Plan completed")
                     .font(.caption)
                     .foregroundColor(.bulkShareSuccess)
                     .padding(.horizontal, 8)
@@ -279,8 +279,8 @@ struct TripItemsListSection: View {
                     Image(systemName: "cart")
                         .font(.system(size: 40))
                         .foregroundColor(.bulkShareTextLight)
-                    
-                    Text("No items in this trip")
+
+                    Text("No items in this plan")
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
                 }
@@ -490,7 +490,7 @@ struct TripSummarySection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Trip Summary")
+            Text("Plan Summary")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.bulkShareTextDark)
@@ -523,12 +523,12 @@ struct TripSummarySection: View {
                 }
                 
                 HStack {
-                    Text("Trip date:")
+                    Text("Plan date:")
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
-                    
+
                     Spacer()
-                    
+
                     Text(trip.scheduledDate, style: .date)
                         .font(.subheadline)
                         .fontWeight(.semibold)

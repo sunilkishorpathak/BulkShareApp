@@ -25,7 +25,7 @@ struct NotificationsView: View {
                     VStack(spacing: 20) {
                         ProgressView()
                             .scaleEffect(1.5)
-                        Text("Loading trip details...")
+                        Text("Loading plan details...")
                             .font(.subheadline)
                             .foregroundColor(.bulkShareTextMedium)
                     }
@@ -170,7 +170,7 @@ struct NotificationsView: View {
                     self.isLoadingTrip = false
                     self.showAlert(
                         title: "Error",
-                        message: "Could not load trip details: \(error.localizedDescription)"
+                        message: "Could not load plan details: \(error.localizedDescription)"
                     )
                 }
             }

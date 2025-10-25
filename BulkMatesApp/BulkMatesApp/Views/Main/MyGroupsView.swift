@@ -280,12 +280,12 @@ struct GroupCard: View {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .bulkShareInfo))
                             .scaleEffect(0.8)
-                        Text("Loading trips...")
+                        Text("Loading plans...")
                             .font(.caption)
                             .foregroundColor(.bulkShareInfo)
                     }
                 } else {
-                    Label("\(groupTrips.count) active trips", systemImage: "cart.fill")
+                    Label("\(groupTrips.count) active plans", systemImage: "cart.fill")
                         .font(.caption)
                         .foregroundColor(.bulkShareInfo)
                 }

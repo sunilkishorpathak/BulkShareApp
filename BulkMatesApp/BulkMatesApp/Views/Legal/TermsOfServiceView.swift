@@ -32,7 +32,7 @@ struct TermsOfServiceView: View {
                         LegalSectionView(title: "2. Description of Service") {
                             Text("BulkMates is a platform that helps users coordinate bulk shopping purchases within groups. Our service allows you to:")
                             LegalBulletPoint("Create and join shopping groups")
-                            LegalBulletPoint("Organize bulk shopping trips")
+                            LegalBulletPoint("Organize bulk shopping plans")
                             LegalBulletPoint("Share items and coordinate bulk purchases")
                         }
                         

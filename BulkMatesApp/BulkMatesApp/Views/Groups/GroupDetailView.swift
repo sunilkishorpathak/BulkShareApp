@@ -11,7 +11,9 @@ struct GroupDetailView: View {
     let group: Group
     @State private var activeTrips: [Trip] = Trip.sampleTrips
     @State private var showingSettings = false
+    @State private var showingTripTypeSelection = false
     @State private var showingCreateTrip = false
+    @State private var selectedTripType: TripType = .bulkShopping
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -28,7 +30,7 @@ struct GroupDetailView: View {
                 
                 // Quick Actions Section
                 QuickActionsSection(group: group, onCreateTrip: {
-                    showingCreateTrip = true
+                    showingTripTypeSelection = true
                 })
                 
                 Spacer(minLength: 100)
@@ -50,8 +52,20 @@ struct GroupDetailView: View {
         .sheet(isPresented: $showingSettings) {
             GroupSettingsView(group: group)
         }
+        .sheet(isPresented: $showingTripTypeSelection) {
+            TripTypeSelectionView(group: group) { tripType in
+                selectedTripType = tripType
+                showingTripTypeSelection = false
+                // Show CreateTripView after a brief delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showingCreateTrip = true
+                }
+            }
+        }
         .sheet(isPresented: $showingCreateTrip) {
-            CreateTripView(group: group)
+            NavigationView {
+                CreateTripView(group: group, tripType: selectedTripType)
+            }
         }
     }
 }
@@ -92,7 +106,7 @@ struct GroupHeaderView: View {
             
             // Group Stats
             HStack(spacing: 16) {
-                GroupStatCard(title: "Active Trips", value: "2", icon: "cart.fill", color: .bulkSharePrimary)
+                GroupStatCard(title: "Active Plans", value: "2", icon: "cart.fill", color: .bulkSharePrimary)
                 GroupStatCard(title: "This Month", value: "$284", icon: "dollarsign.circle.fill", color: .bulkShareSuccess)
                 GroupStatCard(title: "Total Saved", value: "$1.2K", icon: "chart.line.uptrend.xyaxis", color: .bulkShareInfo)
             }
@@ -240,21 +254,23 @@ struct GroupMembersSection: View {
 struct ActiveTripsSection: View {
     let trips: [Trip]
     let group: Group
+    @State private var showingTripTypeSelection = false
     @State private var showingCreateTrip = false
     @State private var showingAllTrips = false
+    @State private var selectedTripType: TripType = .bulkShopping
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("🛒 Active Trips (\(trips.count))")
+                Text("🛒 Active Plans (\(trips.count))")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.bulkShareTextDark)
-                
+
                 Spacer()
-                
-                Button("Create Trip") {
-                    showingCreateTrip = true
+
+                Button("Create Plan") {
+                    showingTripTypeSelection = true
                 }
                 .font(.subheadline)
                 .foregroundColor(.white)
@@ -276,7 +292,7 @@ struct ActiveTripsSection: View {
                     }
                     
                     if trips.count > 3 {
-                        Button("View All Trips (\(trips.count))") {
+                        Button("View All Plans (\(trips.count))") {
                             showingAllTrips = true
                         }
                         .font(.subheadline)
@@ -293,8 +309,20 @@ struct ActiveTripsSection: View {
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+        .sheet(isPresented: $showingTripTypeSelection) {
+            TripTypeSelectionView(group: group) { tripType in
+                selectedTripType = tripType
+                showingTripTypeSelection = false
+                // Show CreateTripView after a brief delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showingCreateTrip = true
+                }
+            }
+        }
         .sheet(isPresented: $showingCreateTrip) {
-            CreateTripView(group: group)
+            NavigationView {
+                CreateTripView(group: group, tripType: selectedTripType)
+            }
         }
         .sheet(isPresented: $showingAllTrips) {
             AllTripsView(groupId: group.id)
@@ -310,12 +338,12 @@ struct EmptyTripsCard: View {
                 .foregroundColor(.bulkShareTextLight)
             
             VStack(spacing: 8) {
-                Text("No Active Trips")
+                Text("No Active Plans")
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.bulkShareTextDark)
-                
-                Text("Create a trip to start bulk sharing with your group")
+
+                Text("Create a plan to start bulk sharing with your group")
                     .font(.caption)
                     .foregroundColor(.bulkShareTextMedium)
                     .multilineTextAlignment(.center)
@@ -426,8 +454,8 @@ struct QuickActionsSection: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
                 QuickActionCard(
                     icon: "cart.badge.plus",
-                    title: "Create Trip",
-                    subtitle: "Plan a new shopping trip",
+                    title: "Create Plan",
+                    subtitle: "Plan a new activity",
                     color: .bulkSharePrimary,
                     action: onCreateTrip
                 )
@@ -537,13 +565,13 @@ struct AllTripsView: View {
     var body: some View {
         NavigationView {
             VStack {
-                Text("All Group Trips")
+                Text("All Group Plans")
                     .font(.title)
-                
+
                 Text("Coming Soon!")
                     .foregroundColor(.bulkShareTextMedium)
             }
-            .navigationTitle("Group Trips")
+            .navigationTitle("Group Plans")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

@@ -25,7 +25,13 @@ struct TripDetailView: View {
     @State private var transactions: [Transaction] = []
     @State private var itemRequests: [ItemRequest] = []
     @State private var showingAddItemRequest = false
-    
+    @State private var showingClaimItem = false
+    @State private var selectedItemToClaim: TripItem?
+    @State private var itemFilter: ItemFilter = .all
+    @State private var itemSort: ItemSort = .name
+    @State private var itemComments: [ItemComment] = []
+    @State private var showingMembersView = false
+
     private var totalCost: Double {
         return selectedItems.reduce(0) { total, selection in
             if let item = trip.items.first(where: { $0.id == selection.key }) {
@@ -46,6 +52,18 @@ struct TripDetailView: View {
     private var isOrganizerView: Bool {
         return trip.shopperId == FirebaseManager.shared.currentUser?.id
     }
+
+    private var currentUserId: String {
+        return FirebaseManager.shared.currentUser?.id ?? ""
+    }
+
+    private var currentUserRole: TripRole {
+        return trip.userRole(userId: currentUserId)
+    }
+
+    private var canEditList: Bool {
+        return trip.canEditList(userId: currentUserId)
+    }
     
     private var pendingClaims: [ItemClaim] {
         claims.filter { $0.status == .pending }
@@ -59,6 +77,19 @@ struct TripDetailView: View {
         itemRequests.filter { $0.requesterUserId == FirebaseManager.shared.currentUser?.id }
     }
     
+    enum ItemFilter: String, CaseIterable {
+        case all = "All Items"
+        case unclaimed = "Unclaimed"
+        case myClaims = "My Claims"
+        case partiallyFilled = "Partially Filled"
+    }
+
+    enum ItemSort: String, CaseIterable {
+        case name = "Name"
+        case quantity = "Quantity"
+        case status = "Status"
+    }
+
     init(trip: Trip) {
         self._trip = State(initialValue: trip)
     }
@@ -67,7 +98,7 @@ struct TripDetailView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Trip Header
-                TripDetailHeader(trip: trip)
+                TripDetailHeader(trip: trip, claims: claims)
                 
                 if isOrganizerView {
                     // Trip Organizer View
@@ -106,28 +137,23 @@ struct TripDetailView: View {
                     // Regular Participant View
                     AvailableItemsSection(
                         items: trip.items,
-                        selectedItems: $selectedItems,
-                        claims: claims
+                        claims: claims,
+                        itemComments: itemComments,
+                        filter: $itemFilter,
+                        sort: $itemSort,
+                        onItemTap: { item in
+                            selectedItemToClaim = item
+                            showingClaimItem = true
+                        }
                     )
                     
-                    // Request Items Section  
+                    // Request Items Section
                     RequestItemsSection(
                         userRequests: userItemRequests,
                         onAddRequest: {
                             showingAddItemRequest = true
                         }
                     )
-                    
-                    // Confirm Selection Section
-                    if hasSelectedItems {
-                        ConfirmSelectionSection(
-                            selectedCount: totalSelectedItems,
-                            isLoading: isLoading,
-                            onConfirm: {
-                                showingJoinAlert = true
-                            }
-                        )
-                    }
                 }
                 
                 // Participants (shown for both views)
@@ -140,12 +166,29 @@ struct TripDetailView: View {
         .background(Color.bulkShareBackground.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                if canEditList {
+                    Button(action: {
+                        showingMembersView = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.2.fill")
+                            Text("\(trip.totalMemberCount)")
+                        }
+                        .foregroundColor(.bulkSharePrimary)
+                    }
+                }
+            }
+
             ToolbarItem(placement: .navigationBarTrailing) {
-                ShareLink(item: "Check out this bulk shopping trip!") {
+                ShareLink(item: "Check out this bulk sharing plan!") {
                     Image(systemName: "square.and.arrow.up")
                         .foregroundColor(.bulkSharePrimary)
                 }
             }
+        }
+        .sheet(isPresented: $showingMembersView) {
+            TripMembersView(trip: trip)
         }
         .alert("Confirm Selection", isPresented: $showingJoinAlert) {
             Button("Cancel", role: .cancel) { }
@@ -161,21 +204,192 @@ struct TripDetailView: View {
             Text("You've successfully confirmed your selection. You'll be notified when it's time for pickup.")
         }
         .onAppear {
-            loadTripData()
-            refreshTripData()
+            Task {
+                await loadTripData()
+                refreshTripData()
+            }
         }
         .sheet(isPresented: $showingAddItemRequest) {
             AddItemRequestView(tripId: trip.id) { request in
                 handleItemRequestSubmission(request)
             }
         }
+        .sheet(isPresented: $showingClaimItem) {
+            if let item = selectedItemToClaim {
+                let itemClaims = claims.filter { $0.itemId == item.id }
+                let itemComments = itemComments.filter { $0.itemId == item.id }
+                ClaimItemView(
+                    item: item,
+                    existingClaims: itemClaims,
+                    existingComments: itemComments,
+                    tripShopperId: trip.shopperId,
+                    onClaim: { quantity in
+                        handleClaimItem(item: item, quantity: quantity)
+                    },
+                    onToggleCompletion: { claim in
+                        handleToggleCompletion(claim: claim)
+                    },
+                    onAddComment: { text in
+                        handleAddComment(item: item, text: text)
+                    }
+                )
+            }
+        }
     }
     
+    private func handleToggleCompletion(claim: ItemClaim) {
+        isLoading = true
+
+        Task {
+            do {
+                // Toggle completion status
+                let updatedCompletion = !claim.isCompleted
+                let completedAt = updatedCompletion ? Date() : nil
+
+                // TODO: Implement FirebaseManager.updateClaimCompletion method
+                // See FIREBASE_BACKEND_IMPLEMENTATION.md for implementation details
+                // try await FirebaseManager.shared.updateClaimCompletion(
+                //     claimId: claim.id,
+                //     isCompleted: updatedCompletion,
+                //     completedAt: completedAt
+                // )
+
+                // For now, update claim locally (will be lost on refresh)
+                if let index = claims.firstIndex(where: { $0.id == claim.id }) {
+                    claims[index].isCompleted = updatedCompletion
+                    claims[index].completedAt = completedAt
+                }
+
+                print("Claim completion toggled (not saved to Firebase yet)")
+
+                // Reload claims to get updated state (when Firebase is implemented)
+                // await loadTripData()
+
+                // Check if all items are now completed
+                let allClaims = claims // Use local claims for now
+                let acceptedClaims = allClaims.filter { $0.status == .accepted }
+                let allCompleted = !acceptedClaims.isEmpty && acceptedClaims.allSatisfy { $0.isCompleted }
+
+                if allCompleted && updatedCompletion {
+                    // TODO: Implement NotificationManager.createAllItemsCompletedNotification method
+                    // See FIREBASE_BACKEND_IMPLEMENTATION.md for implementation details
+                    // Send notification to trip organizer
+                    // if let currentUser = FirebaseManager.shared.currentUser {
+                    //     try await NotificationManager.shared.createAllItemsCompletedNotification(
+                    //         tripId: trip.id,
+                    //         tripOrganizerId: trip.shopperId,
+                    //         completedByUserId: currentUser.id,
+                    //         completedByName: currentUser.name,
+                    //         tripStore: trip.store.displayName
+                    //     )
+                    // }
+                    print("All items completed! (Notification not sent - method not implemented yet)")
+                }
+
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    print("Error toggling completion: \(error)")
+                }
+            }
+        }
+    }
+
+    private func handleAddComment(item: TripItem, text: String) {
+        guard let currentUser = FirebaseManager.shared.currentUser else { return }
+
+        Task {
+            do {
+                // Create comment
+                let comment = ItemComment(
+                    tripId: trip.id,
+                    itemId: item.id,
+                    userId: currentUser.id,
+                    text: text
+                )
+
+                // TODO: Implement FirebaseManager.createItemComment method
+                // See FIREBASE_BACKEND_IMPLEMENTATION.md for implementation details
+                // try await FirebaseManager.shared.createItemComment(comment)
+
+                // For now, add comment locally to show UI (will be lost on refresh)
+                itemComments.append(comment)
+
+                print("Comment created (not saved to Firebase yet): \(comment.text)")
+
+                // Refresh comments when Firebase method is implemented
+                // await loadTripData()
+
+            } catch {
+                print("Error adding comment: \(error)")
+            }
+        }
+    }
+
+    private func handleClaimItem(item: TripItem, quantity: Int) {
+        guard let currentUser = FirebaseManager.shared.currentUser else { return }
+
+        isLoading = true
+
+        Task {
+            do {
+                // Create claim for the item
+                let claim = ItemClaim(
+                    tripId: trip.id,
+                    itemId: item.id,
+                    claimerUserId: currentUser.id,
+                    quantityClaimed: quantity
+                )
+
+                // Save claim to Firebase
+                try await FirebaseManager.shared.createClaims([claim])
+
+                // Send notification to trip organizer
+                try await NotificationManager.shared.createClaimNotification(
+                    tripId: trip.id,
+                    tripOrganizerId: trip.shopperId,
+                    claimerUserId: currentUser.id,
+                    claimerName: currentUser.name,
+                    itemsCount: quantity,
+                    tripStore: trip.store.displayName
+                )
+
+                // Create transaction for item tracking
+                let transaction = Transaction(
+                    tripId: trip.id,
+                    fromUserId: currentUser.id,
+                    toUserId: trip.shopperId,
+                    itemPoints: quantity,
+                    itemClaimIds: [claim.id]
+                )
+
+                try await FirebaseManager.shared.createTransaction(transaction)
+
+                // Refresh claims
+                await loadTripData()
+
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    print("Error claiming item: \(error)")
+                }
+            }
+        }
+    }
+
     private func handleJoinTrip() {
         guard let currentUser = FirebaseManager.shared.currentUser else { return }
-        
+
         isLoading = true
-        
+
         Task {
             do {
                 // Create claims for selected items
@@ -189,10 +403,10 @@ struct TripDetailView: View {
                     )
                     newClaims.append(claim)
                 }
-                
+
                 // Save claims to Firebase
                 try await FirebaseManager.shared.createClaims(newClaims)
-                
+
                 // Send notification to trip organizer
                 let totalItemsRequested = newClaims.reduce(0) { $0 + $1.quantityClaimed }
                 try await NotificationManager.shared.createClaimNotification(
@@ -203,8 +417,8 @@ struct TripDetailView: View {
                     itemsCount: totalItemsRequested,
                     tripStore: trip.store.displayName
                 )
-                
-                // Create transaction for item tracking  
+
+                // Create transaction for item tracking
                 let transaction = Transaction(
                     tripId: trip.id,
                     fromUserId: currentUser.id,
@@ -212,16 +426,18 @@ struct TripDetailView: View {
                     itemPoints: totalItemsRequested,
                     itemClaimIds: newClaims.map { $0.id }
                 )
-                
+
                 try await FirebaseManager.shared.createTransaction(transaction)
-                
+
+                // Refresh claims
+                await loadTripData()
+
                 DispatchQueue.main.async {
                     self.isLoading = false
                     self.showingSuccessAlert = true
                     self.selectedItems.removeAll()
-                    self.loadTripData() // Refresh claims
                 }
-                
+
             } catch {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -230,19 +446,21 @@ struct TripDetailView: View {
             }
         }
     }
-    
+
     private func handleClaimResponse(_ claim: ItemClaim, _ status: ClaimStatus) {
         isLoading = true
-        
+
         Task {
             do {
                 try await FirebaseManager.shared.updateClaimStatus(claimId: claim.id, status: status)
-                
+
+                // Refresh claims
+                await loadTripData()
+
                 DispatchQueue.main.async {
                     self.isLoading = false
-                    self.loadTripData() // Refresh claims
                 }
-                
+
             } catch {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -268,11 +486,10 @@ struct TripDetailView: View {
                         quantity: request.quantityRequested
                     )
                 }
-                
-                DispatchQueue.main.async {
-                    self.loadTripData() // Refresh requests
-                }
-                
+
+                // Refresh requests
+                await loadTripData()
+
             } catch {
                 print("Error creating item request: \(error)")
             }
@@ -309,13 +526,15 @@ struct TripDetailView: View {
                         status: status
                     )
                 }
-                
+
+                // Refresh requests and trip items
+                await loadTripData()
+                refreshTripData() // Refresh the actual trip object
+
                 DispatchQueue.main.async {
                     self.isLoading = false
-                    self.loadTripData() // Refresh requests and trip items
-                    self.refreshTripData() // Refresh the actual trip object
                 }
-                
+
             } catch {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -325,21 +544,25 @@ struct TripDetailView: View {
         }
     }
     
-    private func loadTripData() {
-        Task {
-            do {
-                let tripClaims = try await FirebaseManager.shared.getTripClaims(tripId: trip.id)
-                let tripTransactions = try await FirebaseManager.shared.getTripTransactions(tripId: trip.id)
-                let tripItemRequests = try await FirebaseManager.shared.getTripItemRequests(tripId: trip.id)
-                
-                DispatchQueue.main.async {
-                    self.claims = tripClaims
-                    self.transactions = tripTransactions
-                    self.itemRequests = tripItemRequests
-                }
-            } catch {
-                print("Error loading trip data: \(error)")
+    private func loadTripData() async {
+        do {
+            let tripClaims = try await FirebaseManager.shared.getTripClaims(tripId: trip.id)
+            let tripTransactions = try await FirebaseManager.shared.getTripTransactions(tripId: trip.id)
+            let tripItemRequests = try await FirebaseManager.shared.getTripItemRequests(tripId: trip.id)
+
+            // TODO: Implement FirebaseManager.getTripItemComments method
+            // See FIREBASE_BACKEND_IMPLEMENTATION.md for implementation details
+            // let tripComments = try await FirebaseManager.shared.getTripItemComments(tripId: trip.id)
+            let tripComments: [ItemComment] = [] // Empty for now until Firebase method is implemented
+
+            DispatchQueue.main.async {
+                self.claims = tripClaims
+                self.transactions = tripTransactions
+                self.itemRequests = tripItemRequests
+                self.itemComments = tripComments
             }
+        } catch {
+            print("Error loading trip data: \(error)")
         }
     }
     
@@ -359,9 +582,22 @@ struct TripDetailView: View {
 
 struct TripDetailHeader: View {
     let trip: Trip
+    let claims: [ItemClaim]
     @State private var shopperName: String = "Loading..."
     @State private var isLoadingShopper = true
-    
+
+    private var completionStats: (completed: Int, total: Int) {
+        let acceptedClaims = claims.filter { $0.status == .accepted }
+        let completedCount = acceptedClaims.filter { $0.isCompleted }.count
+        return (completedCount, acceptedClaims.count)
+    }
+
+    private var completionPercentage: Double {
+        let stats = completionStats
+        guard stats.total > 0 else { return 0 }
+        return Double(stats.completed) / Double(stats.total)
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             // Store and Date
@@ -371,24 +607,86 @@ struct TripDetailHeader: View {
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.bulkShareTextDark)
-                    
+
                     Text(trip.scheduledDate, style: .date)
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
                 }
-                
+
                 Spacer()
-                
+
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(trip.scheduledDate, style: .time)
                         .font(.title3)
                         .fontWeight(.semibold)
                         .foregroundColor(.bulkSharePrimary)
-                    
+
                     Text(trip.scheduledDate, style: .relative)
                         .font(.caption)
                         .foregroundColor(.bulkShareTextLight)
                 }
+            }
+
+            // Completion Progress
+            if completionStats.total > 0 {
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.bulkSharePrimary)
+                            .font(.caption)
+
+                        Text("Completion Progress")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.bulkShareTextMedium)
+
+                        Spacer()
+
+                        Text("\(completionStats.completed) of \(completionStats.total) items completed")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(completionPercentage == 1.0 ? .green : .bulkSharePrimary)
+                    }
+
+                    // Progress Bar
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            // Background
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.bulkShareBackground)
+                                .frame(height: 8)
+
+                            // Progress
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [Color.bulkSharePrimary, Color.bulkShareSuccess]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: geometry.size.width * CGFloat(completionPercentage), height: 8)
+                                .animation(.spring(response: 0.5, dampingFraction: 0.7), value: completionPercentage)
+                        }
+                    }
+                    .frame(height: 8)
+
+                    if completionPercentage == 1.0 {
+                        HStack {
+                            Image(systemName: "party.popper.fill")
+                                .foregroundColor(.green)
+                            Text("All items completed!")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.green)
+                            Spacer()
+                        }
+                        .padding(.top, 4)
+                    }
+                }
+                .padding()
+                .background(Color.bulkSharePrimary.opacity(0.05))
+                .cornerRadius(12)
             }
             
             // Shopper Info
@@ -469,33 +767,167 @@ struct TripDetailHeader: View {
 
 struct AvailableItemsSection: View {
     let items: [TripItem]
-    @Binding var selectedItems: [String: Int]
     let claims: [ItemClaim]
-    
+    let itemComments: [ItemComment]
+    @Binding var filter: TripDetailView.ItemFilter
+    @Binding var sort: TripDetailView.ItemSort
+    let onItemTap: (TripItem) -> Void
+
+    private var filteredAndSortedItems: [TripItem] {
+        let currentUserId = FirebaseManager.shared.currentUser?.id
+
+        // Filter items
+        var filtered = items
+        switch filter {
+        case .all:
+            break
+        case .unclaimed:
+            filtered = items.filter { item in
+                let remaining = item.remainingQuantity(claims: claims)
+                return remaining > 0
+            }
+        case .myClaims:
+            filtered = items.filter { item in
+                claims.contains { $0.itemId == item.id && $0.claimerUserId == currentUserId }
+            }
+        case .partiallyFilled:
+            filtered = items.filter { item in
+                let claimed = item.claimedQuantity(claims: claims)
+                let remaining = item.remainingQuantity(claims: claims)
+                return claimed > 0 && remaining > 0
+            }
+        }
+
+        // Sort items
+        switch sort {
+        case .name:
+            return filtered.sorted { $0.name < $1.name }
+        case .quantity:
+            return filtered.sorted { item1, item2 in
+                let remaining1 = item1.remainingQuantity(claims: claims)
+                let remaining2 = item2.remainingQuantity(claims: claims)
+                return remaining1 > remaining2
+            }
+        case .status:
+            return filtered.sorted { item1, item2 in
+                let progress1 = Double(item1.claimedQuantity(claims: claims)) / Double(item1.totalQuantity)
+                let progress2 = Double(item2.claimedQuantity(claims: claims)) / Double(item2.totalQuantity)
+                return progress1 < progress2
+            }
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Available Items (\(items.count))")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.bulkShareTextDark)
-            
-            VStack(spacing: 12) {
-                ForEach(items) { item in
-                    let remainingQty = item.remainingQuantity(claims: claims)
-                    let userClaim = claims.first { $0.itemId == item.id && $0.claimerUserId == FirebaseManager.shared.currentUser?.id }
-                    QuantitySelectableItemCard(
-                        item: item,
-                        remainingQuantity: remainingQty,
-                        selectedQuantity: selectedItems[item.id] ?? 0,
-                        userClaim: userClaim,
-                        onQuantityChange: { quantity in
-                            if quantity > 0 {
-                                selectedItems[item.id] = quantity
-                            } else {
-                                selectedItems.removeValue(forKey: item.id)
+            // Header with count
+            HStack {
+                Text("Available Items (\(filteredAndSortedItems.count))")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.bulkShareTextDark)
+                Spacer()
+            }
+
+            // Filter and Sort Controls
+            HStack(spacing: 12) {
+                // Filter Menu
+                Menu {
+                    ForEach(TripDetailView.ItemFilter.allCases, id: \.self) { filterOption in
+                        Button(action: {
+                            filter = filterOption
+                        }) {
+                            HStack {
+                                Text(filterOption.rawValue)
+                                if filter == filterOption {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
                             }
                         }
-                    )
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                        Text(filter.rawValue)
+                        Image(systemName: "chevron.down")
+                            .font(.caption2)
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.bulkSharePrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.bulkSharePrimary.opacity(0.1))
+                    .cornerRadius(8)
+                }
+
+                // Sort Menu
+                Menu {
+                    ForEach(TripDetailView.ItemSort.allCases, id: \.self) { sortOption in
+                        Button(action: {
+                            sort = sortOption
+                        }) {
+                            HStack {
+                                Text(sortOption.rawValue)
+                                if sort == sortOption {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.arrow.down")
+                        Text(sort.rawValue)
+                        Image(systemName: "chevron.down")
+                            .font(.caption2)
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.bulkSharePrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.bulkSharePrimary.opacity(0.1))
+                    .cornerRadius(8)
+                }
+
+                Spacer()
+            }
+
+            // Items List
+            if filteredAndSortedItems.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 40))
+                        .foregroundColor(.bulkShareTextLight)
+
+                    Text("No items found")
+                        .font(.subheadline)
+                        .foregroundColor(.bulkShareTextMedium)
+
+                    Text("Try adjusting your filters")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextLight)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(30)
+                .background(Color.bulkShareBackground)
+                .cornerRadius(12)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(filteredAndSortedItems) { item in
+                        let itemClaims = claims.filter { $0.itemId == item.id }
+                        let itemCommentCount = itemComments.filter { $0.itemId == item.id }.count
+                        ItemWithClaimsCard(
+                            item: item,
+                            claims: itemClaims,
+                            commentCount: itemCommentCount,
+                            onTap: {
+                                onItemTap(item)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -503,6 +935,199 @@ struct AvailableItemsSection: View {
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+    }
+}
+
+struct ItemWithClaimsCard: View {
+    let item: TripItem
+    let claims: [ItemClaim]
+    let commentCount: Int
+    let onTap: () -> Void
+    @State private var claimerNames: [String: String] = [:]
+
+    private var claimedQuantity: Int {
+        item.claimedQuantity(claims: claims)
+    }
+
+    private var remainingQuantity: Int {
+        item.remainingQuantity(claims: claims)
+    }
+
+    private var progressPercentage: Double {
+        guard item.totalQuantity > 0 else { return 0 }
+        return Double(claimedQuantity) / Double(item.totalQuantity)
+    }
+
+    private var progressColor: Color {
+        if progressPercentage == 0 {
+            return .red
+        } else if progressPercentage >= 1.0 {
+            return .green
+        } else {
+            return .orange
+        }
+    }
+
+    private var activeClaims: [ItemClaim] {
+        claims.filter { $0.status != .cancelled && $0.status != .rejected }
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 12) {
+                // Item Header
+                HStack(alignment: .top) {
+                    Text(item.category.icon)
+                        .font(.title2)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.name)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.bulkShareTextDark)
+                            .multilineTextAlignment(.leading)
+
+                        Text(item.category.displayName)
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextMedium)
+                    }
+
+                    Spacer()
+
+                    // Comment Badge
+                    if commentCount > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bubble.left.fill")
+                                .font(.caption2)
+                            Text("\(commentCount)")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.bulkShareInfo)
+                        .cornerRadius(12)
+                    }
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextLight)
+                }
+
+                // Progress Section
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("\(claimedQuantity) / \(item.totalQuantity) claimed")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(progressColor)
+
+                        Spacer()
+
+                        Text("\(remainingQuantity) remaining")
+                            .font(.caption)
+                            .foregroundColor(remainingQuantity > 0 ? .bulkShareSuccess : .bulkShareTextMedium)
+                    }
+
+                    // Progress Bar
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            // Background
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.bulkShareBackground)
+                                .frame(height: 8)
+
+                            // Progress
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(progressColor)
+                                .frame(width: geometry.size.width * CGFloat(min(progressPercentage, 1.0)), height: 8)
+                                .animation(.spring(response: 0.5, dampingFraction: 0.7), value: progressPercentage)
+                        }
+                    }
+                    .frame(height: 8)
+                }
+
+                // Claims List
+                if !activeClaims.isEmpty {
+                    Divider()
+
+                    VStack(spacing: 6) {
+                        ForEach(activeClaims.prefix(3)) { claim in
+                            HStack(spacing: 8) {
+                                // Completion/Status Icon
+                                if claim.isCompleted {
+                                    Image(systemName: "checkmark.square.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                } else if claim.status == .accepted {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                } else {
+                                    Image(systemName: "clock.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                }
+
+                                // Name with strikethrough if completed
+                                Text(claimerNames[claim.claimerUserId] ?? "Loading...")
+                                    .font(.caption)
+                                    .foregroundColor(claim.isCompleted ? .bulkShareTextLight : .bulkShareTextDark)
+                                    .strikethrough(claim.isCompleted, color: .bulkShareTextLight)
+
+                                Text(":")
+                                    .font(.caption)
+                                    .foregroundColor(.bulkShareTextLight)
+
+                                // Quantity with strikethrough if completed
+                                Text("\(claim.quantityClaimed) pcs")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(claim.isCompleted ? .bulkShareTextLight : (claim.status == .accepted ? .green : .orange))
+                                    .strikethrough(claim.isCompleted, color: .bulkShareTextLight)
+
+                                Spacer()
+                            }
+                        }
+
+                        if activeClaims.count > 3 {
+                            HStack {
+                                Text("+\(activeClaims.count - 3) more")
+                                    .font(.caption)
+                                    .foregroundColor(.bulkShareTextMedium)
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+            }
+            .padding()
+            .background(Color.bulkShareBackground)
+            .cornerRadius(12)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .onAppear {
+            loadClaimerNames()
+        }
+    }
+
+    private func loadClaimerNames() {
+        Task {
+            var names: [String: String] = [:]
+            for claim in claims {
+                do {
+                    let user = try await FirebaseManager.shared.getUser(uid: claim.claimerUserId)
+                    names[claim.claimerUserId] = user.name
+                } catch {
+                    names[claim.claimerUserId] = "Unknown"
+                }
+            }
+
+            DispatchQueue.main.async {
+                self.claimerNames = names
+            }
+        }
     }
 }
 
@@ -672,8 +1297,8 @@ struct ParticipantsSection: View {
                     Image(systemName: "person.badge.plus")
                         .font(.title2)
                         .foregroundColor(.bulkShareTextLight)
-                    
-                    Text("Be the first to join this trip!")
+
+                    Text("Be the first to join this plan!")
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
                 }
@@ -787,11 +1412,11 @@ struct TripItemsOrganizerSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Your Trip Items (\(items.count))")
+            Text("Your Plan Items (\(items.count))")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.bulkShareTextDark)
-            
+
             VStack(spacing: 12) {
                 ForEach(items) { item in
                     let itemClaims = claims.filter { $0.itemId == item.id }
@@ -1031,8 +1656,8 @@ struct RequestItemsSection: View {
                     Text("No item requests yet")
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
-                    
-                    Text("Request additional items you need from this trip")
+
+                    Text("Request additional items you need from this plan")
                         .font(.caption)
                         .foregroundColor(.bulkShareTextLight)
                         .multilineTextAlignment(.center)
@@ -1103,12 +1728,12 @@ struct UserItemRequestCard: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
                         .font(.caption)
-                    
-                    Text("Item added to trip and available for selection")
+
+                    Text("Item added to plan and available for selection")
                         .font(.caption)
                         .foregroundColor(.green)
                         .fontWeight(.medium)
-                    
+
                     Spacer()
                 }
                 .padding(.top, 4)

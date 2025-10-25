@@ -17,6 +17,7 @@ import SwiftUI
 
 struct CreateTripView: View {
     let group: Group
+    let tripType: TripType
     @State private var selectedStore: Store = .costco
     @State private var scheduledDate = Date().addingTimeInterval(3600) // 1 hour from now
     @State private var notes: String = ""
@@ -35,11 +36,15 @@ struct CreateTripView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
+                        // Trip Type Badge
+                        TripTypeBadge(tripType: tripType)
+
                         // Trip Header
-                        TripHeaderCard(group: group, store: $selectedStore, date: $scheduledDate)
-                        
+                        TripHeaderCard(group: group, tripType: tripType, store: $selectedStore, date: $scheduledDate)
+
                         // Items Section
                         TripItemsSection(
+                            tripType: tripType,
                             items: $tripItems,
                             onAddItem: { showingAddItem = true },
                             onRemoveItem: removeItem
@@ -60,7 +65,7 @@ struct CreateTripView: View {
                     .padding()
                 }
             }
-            .navigationTitle("Create Trip")
+            .navigationTitle("Create Plan")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -77,14 +82,14 @@ struct CreateTripView: View {
                 }
             }
             .sheet(isPresented: $showingAddItem) {
-                AddTripItemView { item in
+                AddTripItemView(tripType: tripType) { item in
                     tripItems.append(item)
                 }
             }
             .alert(alertTitle, isPresented: $showingAlert) {
-                if alertTitle == "Trip Created!" {
+                if alertTitle == "Plan Created!" {
                     Button("Create Another") {
-                        // Reset form for another trip
+                        // Reset form for another plan
                         resetForm()
                     }
                     Button("Go Home") {
@@ -109,7 +114,7 @@ struct CreateTripView: View {
     
     private func handleCreateTrip() {
         guard let currentUser = FirebaseManager.shared.currentUser else {
-            showAlert(title: "Error", message: "Please sign in to create a trip")
+            showAlert(title: "Error", message: "Please sign in to create a plan")
             return
         }
         
@@ -121,6 +126,7 @@ struct CreateTripView: View {
                 let trip = Trip(
                     groupId: group.id,
                     shopperId: currentUser.id,
+                    tripType: tripType,
                     store: selectedStore,
                     scheduledDate: scheduledDate,
                     items: tripItems,
@@ -128,15 +134,16 @@ struct CreateTripView: View {
                     participants: [],
                     notes: notes.isEmpty ? nil : notes
                 )
-                
+
                 // Save to Firestore
                 let tripId = try await FirebaseManager.shared.createTrip(trip)
-                
+
                 DispatchQueue.main.async {
                     self.isLoading = false
+                    let tripTypeText = self.tripType == .bulkShopping ? self.selectedStore.displayName : self.tripType.displayName
                     self.showAlert(
-                        title: "Trip Created!",
-                        message: "Your \(self.selectedStore.displayName) trip with \(self.tripItems.count) items has been posted to \(self.group.name)."
+                        title: "Plan Created!",
+                        message: "Your \(tripTypeText) plan with \(self.tripItems.count) items has been posted to \(self.group.name)."
                     )
                 }
                 
@@ -145,7 +152,7 @@ struct CreateTripView: View {
                     self.isLoading = false
                     self.showAlert(
                         title: "Error",
-                        message: "Failed to create trip: \(error.localizedDescription)"
+                        message: "Failed to create plan: \(error.localizedDescription)"
                     )
                 }
             }
@@ -170,11 +177,57 @@ struct CreateTripView: View {
 
 // MARK: - Supporting Views
 
+struct TripTypeBadge: View {
+    let tripType: TripType
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(tripType.icon)
+                .font(.title3)
+            Text(tripType.displayName)
+                .font(.headline)
+                .fontWeight(.semibold)
+        }
+        .foregroundColor(.bulkSharePrimary)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.bulkSharePrimary.opacity(0.1))
+        .cornerRadius(20)
+    }
+}
+
 struct TripHeaderCard: View {
     let group: Group
+    let tripType: TripType
     @Binding var store: Store
     @Binding var date: Date
-    
+
+    var headerText: String {
+        switch tripType {
+        case .bulkShopping:
+            return "Shopping for"
+        case .eventPlanning:
+            return "Planning event for"
+        case .groupTrip:
+            return "Planning activity for"
+        case .potluckMeal:
+            return "Planning potluck with"
+        }
+    }
+
+    var datePrompt: String {
+        switch tripType {
+        case .bulkShopping:
+            return "When are you going?"
+        case .eventPlanning:
+            return "When is the event?"
+        case .groupTrip:
+            return "When is it?"
+        case .potluckMeal:
+            return "When is the meal?"
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             // Group Info
@@ -184,46 +237,48 @@ struct TripHeaderCard: View {
                     .frame(width: 40, height: 40)
                     .background(Color.bulkSharePrimary.opacity(0.1))
                     .cornerRadius(10)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Shopping for")
+                    Text(headerText)
                         .font(.caption)
                         .foregroundColor(.bulkShareTextMedium)
-                    
+
                     Text(group.name)
                         .font(.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.bulkShareTextDark)
                 }
-                
+
                 Spacer()
             }
             
-            // Store Selection
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Store")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.bulkShareTextMedium)
-                
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(Store.allCases, id: \.self) { storeOption in
-                            StoreSelectionCard(
-                                store: storeOption,
-                                isSelected: store == storeOption
-                            ) {
-                                store = storeOption
+            // Store Selection (only for bulk shopping)
+            if tripType == .bulkShopping {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Store")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.bulkShareTextMedium)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(Store.allCases, id: \.self) { storeOption in
+                                StoreSelectionCard(
+                                    store: storeOption,
+                                    isSelected: store == storeOption
+                                ) {
+                                    store = storeOption
+                                }
                             }
                         }
+                        .padding(.horizontal, 4)
                     }
-                    .padding(.horizontal, 4)
                 }
             }
-            
+
             // Date & Time
             VStack(alignment: .leading, spacing: 8) {
-                Text("When are you going?")
+                Text(datePrompt)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.bulkShareTextMedium)
@@ -273,14 +328,41 @@ struct StoreSelectionCard: View {
 }
 
 struct TripItemsSection: View {
+    let tripType: TripType
     @Binding var items: [TripItem]
     let onAddItem: () -> Void
     let onRemoveItem: (Int) -> Void
-    
+
+    var sectionTitle: String {
+        switch tripType {
+        case .bulkShopping:
+            return "Items to Share"
+        case .eventPlanning:
+            return "Event Items Needed"
+        case .groupTrip:
+            return "Supplies Needed"
+        case .potluckMeal:
+            return "Food & Supplies Needed"
+        }
+    }
+
+    var emptyStateMessage: String {
+        switch tripType {
+        case .bulkShopping:
+            return "Add items you want to share from your bulk purchase"
+        case .eventPlanning:
+            return "Add items needed for your event"
+        case .groupTrip:
+            return "Add supplies needed"
+        case .potluckMeal:
+            return "Add food and supplies people can bring"
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Items to Share")
+                Text(sectionTitle)
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.bulkShareTextDark)
@@ -307,8 +389,8 @@ struct TripItemsSection: View {
                     Text("No items added yet")
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
-                    
-                    Text("Add items you want to share from your bulk purchase")
+
+                    Text(emptyStateMessage)
                         .font(.caption)
                         .foregroundColor(.bulkShareTextLight)
                         .multilineTextAlignment(.center)
@@ -411,7 +493,7 @@ struct CreateTripButton: View {
                         .scaleEffect(0.8)
                 } else {
                     Image(systemName: "cart.fill.badge.plus")
-                    Text("Create Trip")
+                    Text("Create Plan")
                         .fontWeight(.semibold)
                 }
             }
@@ -427,5 +509,5 @@ struct CreateTripButton: View {
 }
 
 #Preview {
-    CreateTripView(group: Group.sampleGroups[0])
+    CreateTripView(group: Group.sampleGroups[0], tripType: .bulkShopping)
 }

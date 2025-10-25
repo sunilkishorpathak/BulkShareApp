@@ -16,13 +16,62 @@
 import SwiftUI
 
 struct AddTripItemView: View {
+    let tripType: TripType
     @State private var itemName: String = ""
     @State private var quantity: Int = 1
     @State private var selectedCategory: ItemCategory = .grocery
     @State private var notes: String = ""
     @Environment(\.dismiss) private var dismiss
-    
+
     let onAdd: (TripItem) -> Void
+
+    var relevantCategories: [ItemCategory] {
+        ItemCategory.categoriesFor(tripType: tripType)
+    }
+
+    var headerTitle: String {
+        switch tripType {
+        case .bulkShopping:
+            return "Add Item to Share"
+        case .eventPlanning:
+            return "Add Event Item"
+        case .groupTrip:
+            return "Add Supply"
+        case .potluckMeal:
+            return "Add Food/Supply"
+        }
+    }
+
+    var headerSubtitle: String {
+        switch tripType {
+        case .bulkShopping:
+            return "What item do you want to share with your group?"
+        case .eventPlanning:
+            return "What do you need for the event?"
+        case .groupTrip:
+            return "What supplies are needed?"
+        case .potluckMeal:
+            return "What food or supplies can people bring?"
+        }
+    }
+
+    var quantityLabel: String {
+        switch tripType {
+        case .bulkShopping:
+            return "Quantity Available (0-20)"
+        case .eventPlanning, .groupTrip, .potluckMeal:
+            return "Quantity Needed (0-100)"
+        }
+    }
+
+    var maxQuantity: Int {
+        switch tripType {
+        case .bulkShopping:
+            return 20
+        case .eventPlanning, .groupTrip, .potluckMeal:
+            return 100
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -37,12 +86,12 @@ struct AddTripItemView: View {
                             .background(Color.bulkSharePrimary.opacity(0.1))
                             .cornerRadius(20)
                         
-                        Text("Add Item to Share")
+                        Text(headerTitle)
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.bulkShareTextDark)
-                        
-                        Text("What item do you want to share with your group?")
+
+                        Text(headerSubtitle)
                             .font(.subheadline)
                             .foregroundColor(.bulkShareTextMedium)
                             .multilineTextAlignment(.center)
@@ -73,7 +122,7 @@ struct AddTripItemView: View {
                                 .foregroundColor(.bulkShareTextMedium)
                             
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
-                                ForEach(ItemCategory.allCases, id: \.self) { category in
+                                ForEach(relevantCategories, id: \.self) { category in
                                     CategoryCard(
                                         category: category,
                                         isSelected: selectedCategory == category
@@ -86,13 +135,13 @@ struct AddTripItemView: View {
                         
                         // Quantity
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Quantity Available (0-20)")
+                            Text(quantityLabel)
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.bulkShareTextMedium)
-                            
+
                             Menu {
-                                ForEach(0...20, id: \.self) { count in
+                                ForEach(0...maxQuantity, id: \.self) { count in
                                     Button(action: {
                                         quantity = count
                                     }) {
@@ -170,6 +219,12 @@ struct AddTripItemView: View {
                         .foregroundColor(.bulkSharePrimary)
                 }
             }
+            .onAppear {
+                // Set initial category to first relevant category for trip type
+                if let firstCategory = relevantCategories.first {
+                    selectedCategory = firstCategory
+                }
+            }
         }
     }
     
@@ -221,7 +276,7 @@ struct CategoryCard: View {
 }
 
 #Preview {
-    AddTripItemView { item in
+    AddTripItemView(tripType: .bulkShopping) { item in
         print("Added item: \(item.name)")
     }
 }

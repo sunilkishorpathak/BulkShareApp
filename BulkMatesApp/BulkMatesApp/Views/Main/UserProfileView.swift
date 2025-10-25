@@ -154,7 +154,7 @@ struct UserProfileView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("This action cannot be undone. All your data, groups, and trips will be permanently deleted.")
+                Text("This action cannot be undone. All your data, groups, and plans will be permanently deleted.")
             }
             .alert("Error", isPresented: $showingError) {
                 Button("OK", role: .cancel) { }

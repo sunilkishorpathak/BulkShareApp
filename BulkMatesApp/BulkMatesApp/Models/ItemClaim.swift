@@ -15,14 +15,18 @@ struct ItemClaim: Identifiable, Codable {
     let quantityClaimed: Int
     let claimedAt: Date
     var status: ClaimStatus
-    
+    var isCompleted: Bool // Track if item has been purchased/prepared
+    var completedAt: Date? // When the item was marked complete
+
     init(id: String = UUID().uuidString,
          tripId: String,
          itemId: String,
          claimerUserId: String,
          quantityClaimed: Int,
          claimedAt: Date = Date(),
-         status: ClaimStatus = .pending) {
+         status: ClaimStatus = .pending,
+         isCompleted: Bool = false,
+         completedAt: Date? = nil) {
         self.id = id
         self.tripId = tripId
         self.itemId = itemId
@@ -30,6 +34,8 @@ struct ItemClaim: Identifiable, Codable {
         self.quantityClaimed = quantityClaimed
         self.claimedAt = claimedAt
         self.status = status
+        self.isCompleted = isCompleted
+        self.completedAt = completedAt
     }
 }
 

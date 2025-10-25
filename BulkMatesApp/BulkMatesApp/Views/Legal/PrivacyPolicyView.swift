@@ -26,17 +26,17 @@ struct PrivacyPolicyView: View {
                     
                     VStack(alignment: .leading, spacing: 20) {
                         LegalSectionView(title: "1. Information We Collect") {
-                            Text("We collect information you provide directly to us, such as when you create an account, join groups, create shopping trips, or contact us for support. This may include:")
+                            Text("We collect information you provide directly to us, such as when you create an account, join groups, create shopping plans, or contact us for support. This may include:")
                             LegalBulletPoint("Name and email address")
-                            LegalBulletPoint("Group memberships and trip participation")
+                            LegalBulletPoint("Group memberships and plan participation")
                             LegalBulletPoint("Shopping preferences and history")
                         }
                         
                         LegalSectionView(title: "2. How We Use Your Information") {
                             Text("We use the information we collect to:")
                             LegalBulletPoint("Provide, maintain, and improve our services")
-                            LegalBulletPoint("Coordinate bulk shopping trips and item sharing")
-                            LegalBulletPoint("Send you notifications about trips and group activities")
+                            LegalBulletPoint("Coordinate bulk shopping plans and item sharing")
+                            LegalBulletPoint("Send you notifications about plans and group activities")
                             LegalBulletPoint("Respond to your comments and questions")
                             LegalBulletPoint("Prevent fraud and enhance security")
                         }
