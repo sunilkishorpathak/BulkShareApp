@@ -2,9 +2,10 @@ platform :ios, '15.0'
 
 target 'BulkMatesApp' do
   use_frameworks!
-  
+
   pod 'Firebase/Auth'
   pod 'Firebase/Firestore'
   pod 'Firebase/Functions'
+  pod 'Firebase/Storage'
 end
 
