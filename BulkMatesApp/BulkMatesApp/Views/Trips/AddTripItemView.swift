@@ -14,6 +14,7 @@
 //
 
 import SwiftUI
+import FirebaseStorage
 
 struct AddTripItemView: View {
     let tripType: TripType
@@ -21,6 +22,15 @@ struct AddTripItemView: View {
     @State private var quantity: Int = 1
     @State private var selectedCategory: ItemCategory = .grocery
     @State private var notes: String = ""
+    @State private var selectedImage: UIImage? = nil
+    @State private var imageURL: String? = nil
+    @State private var showImageSourceOptions = false
+    @State private var showImagePicker = false
+    @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
+    @State private var showFullImage = false
+    @State private var isUploadingImage = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     @Environment(\.dismiss) private var dismiss
 
     let onAdd: (TripItem) -> Void
@@ -179,10 +189,82 @@ struct AddTripItemView: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.bulkShareTextMedium)
-                            
+
                             TextField("Any special details about this item...", text: $notes, axis: .vertical)
                                 .textFieldStyle(BulkShareTextFieldStyle())
                                 .lineLimit(2, reservesSpace: true)
+                        }
+
+                        // Photo Section
+                        if selectedImage == nil {
+                            // No photo selected - show add button
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Photo (Optional)")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.bulkShareTextMedium)
+
+                                Button(action: { showImageSourceOptions = true }) {
+                                    HStack {
+                                        Image(systemName: "camera.fill")
+                                            .font(.system(size: 18))
+                                        Text("Add Photo")
+                                            .font(.system(size: 16, weight: .medium))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(Color.bulkSharePrimary.opacity(0.1))
+                                    .foregroundColor(.bulkSharePrimary)
+                                    .cornerRadius(12)
+                                }
+                            }
+                        } else {
+                            // Photo selected - show preview
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Photo")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.bulkShareTextMedium)
+
+                                HStack(spacing: 12) {
+                                    // Thumbnail preview
+                                    if let image = selectedImage {
+                                        Image(uiImage: image)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 80, height: 80)
+                                            .cornerRadius(8)
+                                            .clipped()
+                                            .onTapGesture {
+                                                showFullImage = true
+                                            }
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Photo attached")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                        Text("Tap to view full size")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+
+                                    Spacer()
+
+                                    // Remove button
+                                    Button(action: {
+                                        selectedImage = nil
+                                        imageURL = nil
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.red)
+                                            .font(.title2)
+                                    }
+                                }
+                                .padding()
+                                .background(Color.gray.opacity(0.08))
+                                .cornerRadius(12)
+                            }
                         }
                     }
                     .padding()
@@ -193,17 +275,23 @@ struct AddTripItemView: View {
                     // Add Button
                     Button(action: handleAddItem) {
                         HStack {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Add Item")
-                                .fontWeight(.semibold)
+                            if isUploadingImage {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                Text("Uploading...")
+                            } else {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Add Item")
+                                    .fontWeight(.semibold)
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(isFormValid ? Color.bulkSharePrimary : Color.gray)
+                        .background((isFormValid && !isUploadingImage) ? Color.bulkSharePrimary : Color.gray)
                         .foregroundColor(.white)
                         .cornerRadius(16)
                     }
-                    .disabled(!isFormValid)
+                    .disabled(!isFormValid || isUploadingImage)
                     .padding(.horizontal)
                     
                     Spacer(minLength: 50)
@@ -225,24 +313,124 @@ struct AddTripItemView: View {
                     selectedCategory = firstCategory
                 }
             }
+            .confirmationDialog("Add Photo", isPresented: $showImageSourceOptions, titleVisibility: .visible) {
+                Button("Take Photo") {
+                    imageSourceType = .camera
+                    showImagePicker = true
+                }
+                Button("Choose from Library") {
+                    imageSourceType = .photoLibrary
+                    showImagePicker = true
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Choose a photo source")
+            }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePickerView(image: $selectedImage, sourceType: imageSourceType)
+            }
+            .sheet(isPresented: $showFullImage) {
+                FullImageViewer(image: selectedImage, isPresented: $showFullImage)
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
     
     private var isFormValid: Bool {
         return !itemName.isEmpty && quantity > 0
     }
-    
+
     private func handleAddItem() {
+        // Show loading state
+        isUploadingImage = true
+
+        // If image selected, upload first
+        if let image = selectedImage {
+            uploadImage(image) { uploadedURL in
+                self.imageURL = uploadedURL
+                self.saveItemToDatabase()
+            }
+        } else {
+            // No image, save directly
+            saveItemToDatabase()
+        }
+    }
+
+    private func saveItemToDatabase() {
         let item = TripItem(
             name: itemName,
             quantityAvailable: quantity,
-            estimatedPrice: 0.0, // Default price to 0 since we removed price input
+            estimatedPrice: 0.0,
             category: selectedCategory,
-            notes: notes.isEmpty ? nil : notes
+            notes: notes.isEmpty ? nil : notes,
+            imageURL: imageURL
         )
-        
+
+        isUploadingImage = false
         onAdd(item)
         dismiss()
+    }
+
+    private func uploadImage(_ image: UIImage, completion: @escaping (String?) -> Void) {
+        // Compress image
+        guard let imageData = image.jpegData(compressionQuality: 0.6) else {
+            DispatchQueue.main.async {
+                self.isUploadingImage = false
+                self.errorMessage = "Failed to process image"
+                self.showError = true
+            }
+            completion(nil)
+            return
+        }
+
+        // Check image size (limit to 10MB)
+        if imageData.count > 10_000_000 {
+            DispatchQueue.main.async {
+                self.isUploadingImage = false
+                self.errorMessage = "Image is too large. Please choose a smaller image (max 10MB)."
+                self.showError = true
+            }
+            completion(nil)
+            return
+        }
+
+        let storageRef = Storage.storage().reference()
+        let imageName = "\(UUID().uuidString).jpg"
+        let imageRef = storageRef.child("item_images/\(imageName)")
+
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+
+        imageRef.putData(imageData, metadata: metadata) { metadata, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    self.isUploadingImage = false
+                    self.errorMessage = "Error uploading image: \(error.localizedDescription)"
+                    self.showError = true
+                }
+                print("Error uploading image: \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+
+            imageRef.downloadURL { url, error in
+                if let error = error {
+                    DispatchQueue.main.async {
+                        self.isUploadingImage = false
+                        self.errorMessage = "Error getting download URL: \(error.localizedDescription)"
+                        self.showError = true
+                    }
+                    print("Error getting download URL: \(error.localizedDescription)")
+                    completion(nil)
+                    return
+                }
+                completion(url?.absoluteString)
+            }
+        }
     }
 }
 
@@ -250,13 +438,13 @@ struct CategoryCard: View {
     let category: ItemCategory
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Text(category.icon)
                     .font(.title2)
-                
+
                 Text(category.displayName)
                     .font(.caption)
                     .fontWeight(.medium)
@@ -272,6 +460,41 @@ struct CategoryCard: View {
             )
         }
         .foregroundColor(isSelected ? .bulkSharePrimary : .bulkShareTextMedium)
+    }
+}
+
+// Full-size image viewer
+struct FullImageViewer: View {
+    let image: UIImage?
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding()
+            }
+
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: { isPresented = false }) {
+                        Text("Done")
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.5))
+                            .cornerRadius(8)
+                    }
+                    .padding()
+                }
+                Spacer()
+            }
+        }
     }
 }
 

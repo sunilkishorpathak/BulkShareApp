@@ -15,5 +15,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>BulkMates needs camera access to take photos of items or receipts for your plans</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BulkMates needs photo library access to choose photos for plan items</string>
 </dict>
 </plist>

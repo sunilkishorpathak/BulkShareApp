@@ -448,30 +448,56 @@ struct TripItemsSection: View {
 struct TripItemCard: View {
     let item: TripItem
     let onRemove: () -> Void
-    
+
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            // Show thumbnail if image exists
+            if let imageURL = item.imageURL, let url = URL(string: imageURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 50, height: 50)
+                            .cornerRadius(8)
+                            .clipped()
+                    case .failure(_):
+                        Image(systemName: "photo.fill")
+                            .frame(width: 50, height: 50)
+                            .foregroundColor(.gray)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 50, height: 50)
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+            }
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.bulkShareTextDark)
-                
+
                 HStack {
                     Text("\(item.category.icon) \(item.category.displayName)")
                         .font(.caption)
                         .foregroundColor(.bulkShareTextMedium)
-                    
+
                     Spacer()
-                    
+
                     Text("\(item.quantityAvailable) available")
                         .font(.caption)
                         .foregroundColor(.bulkShareInfo)
                 }
             }
-            
+
             Spacer()
-            
+
             VStack(alignment: .trailing, spacing: 4) {
                 Button(action: onRemove) {
                     Image(systemName: "trash.circle.fill")

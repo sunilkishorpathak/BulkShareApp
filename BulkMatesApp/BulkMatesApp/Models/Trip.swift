@@ -253,6 +253,7 @@ struct TripItem: Identifiable, Codable {
     var estimatedPrice: Double
     var category: ItemCategory
     var notes: String?
+    var imageURL: String? // Optional photo URL for receipts, product images, etc.
     var isCompleted: Bool // Track if item has been fulfilled/delivered
 
     init(id: String = UUID().uuidString,
@@ -261,6 +262,7 @@ struct TripItem: Identifiable, Codable {
          estimatedPrice: Double,
          category: ItemCategory = .grocery,
          notes: String? = nil,
+         imageURL: String? = nil,
          isCompleted: Bool = false) {
         self.id = id
         self.name = name
@@ -268,6 +270,7 @@ struct TripItem: Identifiable, Codable {
         self.estimatedPrice = estimatedPrice
         self.category = category
         self.notes = notes
+        self.imageURL = imageURL
         self.isCompleted = isCompleted
     }
 
