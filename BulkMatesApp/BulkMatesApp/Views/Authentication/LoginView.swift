@@ -48,24 +48,22 @@ struct LoginView: View {
                     
                     // Logo and Branding
                     VStack(spacing: 20) {
-                        // Logo
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.2))
-                                .frame(width: 100, height: 100)
-                            
-                            Text("🍃")
-                                .font(.system(size: 50))
-                        }
-                        
+                        // Logo - Circle of Friends App Icon
+                        Image("SplashIcon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 120, height: 120)
+                            .clipShape(RoundedRectangle(cornerRadius: 26))
+                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+
                         // App Name
                         Text("BulkMates")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
-                        
+
                         // Tagline
-                        Text("Share Smarter, Waste Less")
+                        Text("Plan Together, Achieve More")
                             .font(.headline)
                             .foregroundColor(.white.opacity(0.9))
                     }

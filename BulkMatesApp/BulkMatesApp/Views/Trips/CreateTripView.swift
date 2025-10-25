@@ -18,6 +18,7 @@ import SwiftUI
 struct CreateTripView: View {
     let group: Group
     let tripType: TripType
+    @State private var planName: String = ""
     @State private var selectedStore: Store = .costco
     @State private var scheduledDate = Date().addingTimeInterval(3600) // 1 hour from now
     @State private var notes: String = ""
@@ -38,6 +39,9 @@ struct CreateTripView: View {
                     VStack(spacing: 24) {
                         // Trip Type Badge
                         TripTypeBadge(tripType: tripType)
+
+                        // Plan Name Field
+                        PlanNameSection(planName: $planName)
 
                         // Trip Header
                         TripHeaderCard(group: group, tripType: tripType, store: $selectedStore, date: $scheduledDate)
@@ -67,6 +71,9 @@ struct CreateTripView: View {
             }
             .navigationTitle("Create Plan")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                generateDefaultPlanName()
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }
@@ -105,11 +112,30 @@ struct CreateTripView: View {
     }
     
     private var isFormValid: Bool {
-        return !tripItems.isEmpty && scheduledDate > Date()
+        return !planName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+               !tripItems.isEmpty &&
+               scheduledDate > Date()
     }
-    
+
     private func removeItem(at index: Int) {
         tripItems.remove(at: index)
+    }
+
+    private func generateDefaultPlanName() {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMM dd, yyyy"
+        let dateString = dateFormatter.string(from: scheduledDate)
+
+        switch tripType {
+        case .bulkShopping:
+            planName = "Shopping - \(dateString)"
+        case .eventPlanning:
+            planName = "Event - \(dateString)"
+        case .groupTrip:
+            planName = "Trip - \(dateString)"
+        case .potluckMeal:
+            planName = "Potluck - \(dateString)"
+        }
     }
     
     private func handleCreateTrip() {
@@ -124,6 +150,7 @@ struct CreateTripView: View {
             do {
                 // Create the trip object
                 let trip = Trip(
+                    name: planName,
                     groupId: group.id,
                     shopperId: currentUser.id,
                     tripType: tripType,
@@ -166,6 +193,7 @@ struct CreateTripView: View {
         selectedStore = .costco
         alertTitle = ""
         alertMessage = ""
+        generateDefaultPlanName()
     }
     
     private func showAlert(title: String, message: String) {
@@ -479,11 +507,53 @@ struct TripNotesSection: View {
     }
 }
 
+struct PlanNameSection: View {
+    @Binding var planName: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Plan Name")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.bulkShareTextDark)
+
+                Spacer()
+
+                if !planName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.bulkShareSuccess)
+                        .font(.subheadline)
+                }
+            }
+
+            TextField("Enter plan name (e.g., Emma's Birthday Party)", text: $planName)
+                .textFieldStyle(BulkShareTextFieldStyle())
+                .font(.system(size: 16))
+
+            if planName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                HStack {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundColor(.bulkShareWarning)
+                        .font(.caption)
+                    Text("Plan name is required")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextMedium)
+                }
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+    }
+}
+
 struct CreateTripButton: View {
     let isValid: Bool
     let isLoading: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack {

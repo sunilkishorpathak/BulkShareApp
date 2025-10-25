@@ -116,6 +116,7 @@ enum TripRole: String, Codable, CaseIterable {
 // MARK: - Trip Model
 struct Trip: Identifiable, Codable {
     let id: String
+    var name: String // Plan/trip name (e.g., "Emma's Birthday Party", "Costco Run")
     var groupId: String
     var shopperId: String
     var tripType: TripType // Type of trip (bulk shopping, event, group trip, potluck)
@@ -134,6 +135,7 @@ struct Trip: Identifiable, Codable {
 
     // MARK: - Initializers
     init(id: String = UUID().uuidString,
+         name: String = "",
          groupId: String,
          shopperId: String,
          tripType: TripType = .bulkShopping, // Default to bulk shopping for backward compatibility
@@ -148,6 +150,7 @@ struct Trip: Identifiable, Codable {
          adminIds: [String] = [],
          viewerIds: [String] = []) {
         self.id = id
+        self.name = name
         self.groupId = groupId
         self.shopperId = shopperId
         self.tripType = tripType

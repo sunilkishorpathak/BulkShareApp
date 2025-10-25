@@ -50,22 +50,20 @@ struct SignUpView: View {
                     
                     // Logo and Branding
                     VStack(spacing: 16) {
-                        // Logo
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.2))
-                                .frame(width: 70, height: 70)
-                            
-                            Text("🍃")
-                                .font(.system(size: 35))
-                        }
-                        
+                        // Logo - Circle of Friends App Icon
+                        Image("SplashIcon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 90, height: 90)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+
                         // Title
                         Text("Join BulkMates")
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
-                        
+
                         Text("Start sharing today")
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.9))
