@@ -59,11 +59,15 @@
 		};
 		B90C800A2E87D3F300F3251D /* BulkMatesAppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = BulkMatesAppTests;
 			sourceTree = "<group>";
 		};
 		B90C80142E87D3F300F3251D /* BulkMatesAppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = BulkMatesAppUITests;
 			sourceTree = "<group>";
 		};
@@ -302,13 +306,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-BulkMatesApp/Pods-BulkMatesApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-BulkMatesApp/Pods-BulkMatesApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

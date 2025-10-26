@@ -18,7 +18,7 @@ struct ProfileImageView: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
             if let imageURL = user.profileImageURL, let url = URL(string: imageURL) {
                 AsyncImage(url: url) { phase in
                     switch phase {
@@ -66,7 +66,7 @@ struct ProfileImageFromURL: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
             if let imageURL = imageURL, let url = URL(string: imageURL) {
                 AsyncImage(url: url) { phase in
                     switch phase {

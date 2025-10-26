@@ -596,7 +596,7 @@ struct EditableProfileHeaderView: View {
             // Profile Image / Initials with Edit Button
             ZStack(alignment: .bottomTrailing) {
                 // Main profile image
-                Group {
+                ZStack {
                     if let selectedImage = selectedImage {
                         // Show newly selected image
                         Image(uiImage: selectedImage)
@@ -630,7 +630,7 @@ struct EditableProfileHeaderView: View {
                         .stroke(Color.bulkSharePrimary.opacity(0.2), lineWidth: 2)
                 )
                 .overlay(
-                    Group {
+                    ZStack {
                         if isUploading {
                             ZStack {
                                 Circle()
