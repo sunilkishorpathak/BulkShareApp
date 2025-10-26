@@ -14,6 +14,8 @@
 //
 
 import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
 
 struct LoginView: View {
     @State private var email: String = ""
@@ -24,7 +26,13 @@ struct LoginView: View {
     @State private var navigateToSignup: Bool = false
     @State private var navigateToForgotPassword: Bool = false
     @State private var navigateToMainApp: Bool = false
-    
+
+    // Remember Me
+    @State private var rememberMe: Bool = false
+
+    // Biometric
+    @State private var attemptedBiometric = false
+
     var body: some View {
         ZStack {
             // Background Gradient
@@ -112,7 +120,23 @@ struct LoginView: View {
                                     .font(.subheadline)
                                     .foregroundColor(.bulkSharePrimary)
                                 }
-                                
+
+                                // Remember Me Checkbox
+                                Button(action: { rememberMe.toggle() }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: rememberMe ? "checkmark.square.fill" : "square")
+                                            .foregroundColor(rememberMe ? .bulkSharePrimary : .gray)
+                                            .font(.title3)
+
+                                        Text("Remember Me")
+                                            .font(.subheadline)
+                                            .foregroundColor(.bulkShareTextDark)
+
+                                        Spacer()
+                                    }
+                                }
+                                .buttonStyle(.plain)
+
                                 // Login Button
                                 Button(action: handleLogin) {
                                     HStack {
@@ -172,8 +196,14 @@ struct LoginView: View {
         } message: {
             Text(alertMessage)
         }
+        .onAppear {
+            loadSavedCredentials()
+            attemptBiometricLogin()
+        }
     }
-    
+
+    // MARK: - Authentication Functions
+
     private func handleLogin() {
         // Basic validation
         guard isValidEmail(email) else {
@@ -190,12 +220,24 @@ struct LoginView: View {
         
         Task {
             let result = await FirebaseManager.shared.signIn(email: email, password: password)
-            
+
             DispatchQueue.main.async {
                 self.isLoading = false
-                
+
                 switch result {
                 case .success:
+                    // Save credentials if Remember Me is checked
+                    if self.rememberMe {
+                        self.saveCredentials()
+                    } else {
+                        self.clearSavedCredentials()
+                    }
+
+                    // Update last login date
+                    if let userId = Auth.auth().currentUser?.uid {
+                        self.updateLastLogin(userId: userId)
+                    }
+
                     // Navigation handled automatically by RootView
                     break
                 case .failure(let error):
@@ -204,7 +246,86 @@ struct LoginView: View {
             }
         }
     }
-    
+
+    // MARK: - Remember Me Functions
+
+    private func saveCredentials() {
+        UserDefaults.standard.set(email, forKey: "savedUserId")
+        UserDefaults.standard.set(AuthMethod.email.rawValue, forKey: "savedAuthMethod")
+        UserDefaults.standard.set(true, forKey: "rememberMe")
+
+        print("✅ Credentials saved for: \(email)")
+    }
+
+    private func clearSavedCredentials() {
+        UserDefaults.standard.removeObject(forKey: "savedUserId")
+        UserDefaults.standard.removeObject(forKey: "savedAuthMethod")
+        UserDefaults.standard.set(false, forKey: "rememberMe")
+
+        print("🗑️ Credentials cleared")
+    }
+
+    private func loadSavedCredentials() {
+        let rememberMeEnabled = UserDefaults.standard.bool(forKey: "rememberMe")
+
+        if rememberMeEnabled {
+            if let savedEmail = UserDefaults.standard.string(forKey: "savedUserId") {
+                self.email = savedEmail
+                self.rememberMe = true
+
+                print("📧 Loaded saved email: \(savedEmail)")
+            }
+        }
+    }
+
+    private func attemptBiometricLogin() {
+        // Only attempt once per session
+        guard !attemptedBiometric else { return }
+        attemptedBiometric = true
+
+        // Check if Remember Me is enabled and user has biometric enabled
+        guard UserDefaults.standard.bool(forKey: "rememberMe"),
+              let savedEmail = UserDefaults.standard.string(forKey: "savedUserId"),
+              !savedEmail.isEmpty else {
+            return
+        }
+
+        // Get the user ID from email (would need to be stored separately)
+        // For now, we'll just check if biometric is generally enabled
+        let biometricEnabled = BiometricAuth.shared.isAvailable()
+
+        guard biometricEnabled else { return }
+
+        // Attempt biometric authentication
+        BiometricAuth.shared.authenticate(reason: "Log in to BulkMates") { success, error in
+            if success {
+                print("✅ Biometric authentication successful")
+                // Email is already pre-filled from loadSavedCredentials
+                // User still needs to enter password for security
+            } else {
+                if let error = error {
+                    print("❌ Biometric authentication failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func updateLastLogin(userId: String) {
+        let db = Firestore.firestore()
+        db.collection("users").document(userId).updateData([
+            "lastLoginDate": Timestamp(date: Date())
+        ]) { error in
+            if let error = error {
+                print("Error updating last login: \(error)")
+            }
+        }
+
+        // Start session
+        SessionManager.shared.startSession()
+    }
+
+    // MARK: - Helper Functions
+
     private func showAlert(message: String) {
         alertMessage = message
         showingAlert = true

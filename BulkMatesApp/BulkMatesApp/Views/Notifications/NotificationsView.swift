@@ -200,30 +200,46 @@ struct NotificationCard: View {
         }) {
             VStack(alignment: .leading, spacing: 12) {
                 // Header
-                HStack {
-                    Image(systemName: notification.type.icon)
-                        .foregroundColor(Color(notification.type.color))
-                        .font(.title2)
-                    
+                HStack(spacing: 12) {
+                    // Sender Profile Picture or Icon
+                    if let imageURL = notification.senderProfileImageURL, let url = URL(string: imageURL) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 44, height: 44)
+                                    .clipShape(Circle())
+                            case .failure(_), .empty:
+                                defaultNotificationAvatar
+                            @unknown default:
+                                defaultNotificationAvatar
+                            }
+                        }
+                    } else {
+                        defaultNotificationAvatar
+                    }
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text(notification.title)
                             .font(.headline)
                             .fontWeight(.semibold)
                             .foregroundColor(.bulkShareTextDark)
-                        
+
                         Text(notification.message)
                             .font(.subheadline)
                             .foregroundColor(.bulkShareTextMedium)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    
+
                     Spacer()
-                    
+
                     VStack(alignment: .trailing, spacing: 4) {
                         Text(timeAgoString(from: notification.createdAt))
                             .font(.caption)
                             .foregroundColor(.bulkShareTextLight)
-                        
+
                         if !notification.isRead {
                             Circle()
                                 .fill(Color.bulkSharePrimary)
@@ -293,6 +309,18 @@ struct NotificationCard: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private var defaultNotificationAvatar: some View {
+        ZStack {
+            Circle()
+                .fill(Color(notification.type.color).opacity(0.2))
+                .frame(width: 44, height: 44)
+
+            Image(systemName: notification.type.icon)
+                .foregroundColor(Color(notification.type.color))
+                .font(.title3)
+        }
     }
 }
 

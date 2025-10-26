@@ -18,8 +18,8 @@ struct ClaimItemView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var quantityToClaim: Int = 1
-    @State private var claimerNames: [String: String] = [:]
-    @State private var commenterNames: [String: String] = [:]
+    @State private var claimerUsers: [String: User] = [:]
+    @State private var commenterUsers: [String: User] = [:]
     @State private var isLoadingNames = true
     @State private var newCommentText: String = ""
     @FocusState private var isCommentFieldFocused: Bool
@@ -146,7 +146,7 @@ struct ClaimItemView: View {
                                     ForEach(existingClaims) { claim in
                                         ClaimDetailRow(
                                             claim: claim,
-                                            claimerName: claimerNames[claim.claimerUserId] ?? "Loading...",
+                                            claimerUser: claimerUsers[claim.claimerUserId],
                                             canToggleCompletion: canUserToggleCompletion(claim: claim),
                                             onToggleCompletion: {
                                                 onToggleCompletion(claim)
@@ -312,7 +312,7 @@ struct ClaimItemView: View {
                                     ForEach(existingComments.sorted { $0.createdAt < $1.createdAt }) { comment in
                                         CommentRow(
                                             comment: comment,
-                                            commenterName: commenterNames[comment.userId] ?? "Loading..."
+                                            commenterUser: commenterUsers[comment.userId]
                                         )
                                     }
                                 }
@@ -321,15 +321,9 @@ struct ClaimItemView: View {
                             // Comment Input Field
                             VStack(spacing: 12) {
                                 HStack(alignment: .top, spacing: 12) {
-                                    // User Avatar
+                                    // User Profile Picture
                                     if let currentUser = FirebaseManager.shared.currentUser {
-                                        Text(String(currentUser.name.prefix(1)).uppercased())
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.white)
-                                            .frame(width: 32, height: 32)
-                                            .background(Color.bulkSharePrimary)
-                                            .cornerRadius(16)
+                                        ProfileImageView(user: currentUser, size: 32)
                                     }
 
                                     // Text Field
@@ -442,18 +436,18 @@ struct ClaimItemView: View {
 
     private func loadClaimerNames() {
         Task {
-            var names: [String: String] = [:]
+            var users: [String: User] = [:]
             for claim in existingClaims {
                 do {
                     let user = try await FirebaseManager.shared.getUser(uid: claim.claimerUserId)
-                    names[claim.claimerUserId] = user.name
+                    users[claim.claimerUserId] = user
                 } catch {
-                    names[claim.claimerUserId] = "Unknown User"
+                    print("Error loading claimer: \(error)")
                 }
             }
 
             DispatchQueue.main.async {
-                self.claimerNames = names
+                self.claimerUsers = users
                 self.isLoadingNames = false
             }
         }
@@ -461,18 +455,18 @@ struct ClaimItemView: View {
 
     private func loadCommenterNames() {
         Task {
-            var names: [String: String] = [:]
+            var users: [String: User] = [:]
             for comment in existingComments {
                 do {
                     let user = try await FirebaseManager.shared.getUser(uid: comment.userId)
-                    names[comment.userId] = user.name
+                    users[comment.userId] = user
                 } catch {
-                    names[comment.userId] = "Unknown User"
+                    print("Error loading commenter: \(error)")
                 }
             }
 
             DispatchQueue.main.async {
-                self.commenterNames = names
+                self.commenterUsers = users
             }
         }
     }
@@ -526,9 +520,13 @@ struct QuantityProgressBar: View {
 
 struct ClaimDetailRow: View {
     let claim: ItemClaim
-    let claimerName: String
+    let claimerUser: User?
     let canToggleCompletion: Bool
     let onToggleCompletion: () -> Void
+
+    private var claimerName: String {
+        claimerUser?.name ?? "Loading..."
+    }
 
     var statusIcon: String {
         if claim.isCompleted {
@@ -556,15 +554,16 @@ struct ClaimDetailRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Avatar Circle
-            Text(String(claimerName.prefix(1)).uppercased())
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .frame(width: 40, height: 40)
-                .background(statusColor)
-                .cornerRadius(20)
-                .opacity(claim.isCompleted ? 0.5 : 1.0)
+            // Profile Picture
+            if let user = claimerUser {
+                ProfileImageView(user: user, size: 40)
+                    .opacity(claim.isCompleted ? 0.5 : 1.0)
+            } else {
+                // Placeholder while loading
+                Circle()
+                    .fill(statusColor.opacity(0.2))
+                    .frame(width: 40, height: 40)
+            }
 
             // Name and Quantity
             VStack(alignment: .leading, spacing: 4) {
@@ -620,7 +619,11 @@ struct ClaimDetailRow: View {
 
 struct CommentRow: View {
     let comment: ItemComment
-    let commenterName: String
+    let commenterUser: User?
+
+    private var commenterName: String {
+        commenterUser?.name ?? "Loading..."
+    }
 
     private var timeAgo: String {
         let formatter = RelativeDateTimeFormatter()
@@ -630,14 +633,15 @@ struct CommentRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Avatar
-            Text(String(commenterName.prefix(1)).uppercased())
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .frame(width: 32, height: 32)
-                .background(Color.bulkShareInfo)
-                .cornerRadius(16)
+            // Profile Picture
+            if let user = commenterUser {
+                ProfileImageView(user: user, size: 32)
+            } else {
+                // Placeholder while loading
+                Circle()
+                    .fill(Color.bulkShareInfo.opacity(0.2))
+                    .frame(width: 32, height: 32)
+            }
 
             // Comment Content
             VStack(alignment: .leading, spacing: 4) {

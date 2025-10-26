@@ -18,11 +18,19 @@ struct SignUpView: View {
     @State private var alertMessage: String = ""
     @State private var navigateToLogin: Bool = false
     @Environment(\.dismiss) private var dismiss
-    
+
+    // Address fields (optional)
+    @State private var street: String = ""
+    @State private var city: String = ""
+    @State private var state: String = ""
+    @State private var postalCode: String = ""
+    @State private var selectedCountry: String = "US"
+    @State private var showAddressFields: Bool = false
+
     @FocusState private var focusedField: Field?
-    
+
     enum Field {
-        case fullName, email, password, confirmPassword
+        case fullName, email, password, confirmPassword, street, city, state, postalCode
     }
     
     var body: some View {
@@ -140,7 +148,101 @@ struct SignUpView: View {
                                     }
                                 }
                             }
-                            
+
+                            // Address Section (Optional)
+                            VStack(alignment: .leading, spacing: 12) {
+                                Button(action: { showAddressFields.toggle() }) {
+                                    HStack {
+                                        Text("Address (Optional)")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.bulkShareTextMedium)
+
+                                        Spacer()
+
+                                        Image(systemName: showAddressFields ? "chevron.up" : "chevron.down")
+                                            .foregroundColor(.bulkShareTextMedium)
+                                            .font(.caption)
+                                    }
+                                }
+
+                                if showAddressFields {
+                                    VStack(spacing: 12) {
+                                        // Street Address
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Street Address")
+                                                .font(.caption)
+                                                .foregroundColor(.bulkShareTextMedium)
+
+                                            TextField("123 Main Street", text: $street)
+                                                .textFieldStyle(BulkShareTextFieldStyle())
+                                                .focused($focusedField, equals: .street)
+                                                .autocapitalization(.words)
+                                        }
+
+                                        // City
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("City")
+                                                .font(.caption)
+                                                .foregroundColor(.bulkShareTextMedium)
+
+                                            TextField("City", text: $city)
+                                                .textFieldStyle(BulkShareTextFieldStyle())
+                                                .focused($focusedField, equals: .city)
+                                                .autocapitalization(.words)
+                                        }
+
+                                        // State and Postal Code
+                                        HStack(spacing: 12) {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                Text("State")
+                                                    .font(.caption)
+                                                    .foregroundColor(.bulkShareTextMedium)
+
+                                                TextField("State", text: $state)
+                                                    .textFieldStyle(BulkShareTextFieldStyle())
+                                                    .focused($focusedField, equals: .state)
+                                                    .autocapitalization(.allCharacters)
+                                            }
+
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                Text("Zip Code")
+                                                    .font(.caption)
+                                                    .foregroundColor(.bulkShareTextMedium)
+
+                                                TextField("12345", text: $postalCode)
+                                                    .textFieldStyle(BulkShareTextFieldStyle())
+                                                    .focused($focusedField, equals: .postalCode)
+                                                    .keyboardType(.numberPad)
+                                            }
+                                        }
+
+                                        // Country Picker
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Country")
+                                                .font(.caption)
+                                                .foregroundColor(.bulkShareTextMedium)
+
+                                            Picker("Country", selection: $selectedCountry) {
+                                                ForEach(countries, id: \.code) { country in
+                                                    HStack {
+                                                        Text(country.flag)
+                                                        Text(country.name)
+                                                    }
+                                                    .tag(country.code)
+                                                }
+                                            }
+                                            .pickerStyle(MenuPickerStyle())
+                                            .tint(.bulkSharePrimary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(12)
+                                            .background(Color.gray.opacity(0.08))
+                                            .cornerRadius(8)
+                                        }
+                                    }
+                                }
+                            }
+
                             // Form validation status (for debugging/user feedback)
                             if !isFormValid && (!fullName.isEmpty || !email.isEmpty || !password.isEmpty || !confirmPassword.isEmpty) {
                                 VStack(alignment: .leading, spacing: 4) {
@@ -299,20 +401,34 @@ struct SignUpView: View {
             showAlert(title: "Invalid Form", message: "Please fill all fields correctly")
             return
         }
-        
+
         isLoading = true
-        
+
+        // Create address object if fields are filled
+        var userAddress: Address? = nil
+        if !city.isEmpty && !state.isEmpty && !postalCode.isEmpty {
+            userAddress = Address(
+                street: street.isEmpty ? nil : street,
+                city: city,
+                state: state,
+                postalCode: postalCode,
+                country: selectedCountry
+            )
+        }
+
         Task {
             let result = await FirebaseManager.shared.signUp(
                 email: email,
                 password: password,
                 fullName: fullName,
-                paypalId: ""
+                paypalId: "",
+                address: userAddress,
+                countryCode: selectedCountry
             )
-            
+
             DispatchQueue.main.async {
                 self.isLoading = false
-                
+
                 switch result {
                 case .success:
                     self.showAlert(

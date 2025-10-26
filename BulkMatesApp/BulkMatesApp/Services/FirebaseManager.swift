@@ -42,21 +42,30 @@ class FirebaseManager: ObservableObject {
     
     // MARK: - Authentication Methods
     
-    func signUp(email: String, password: String, fullName: String, paypalId: String) async -> Result<Void, Error> {
+    func signUp(
+        email: String,
+        password: String,
+        fullName: String,
+        paypalId: String,
+        address: Address? = nil,
+        countryCode: String? = nil
+    ) async -> Result<Void, Error> {
         isLoading = true
-        
+
         do {
             let result = try await auth.createUser(withEmail: email, password: password)
             try await result.user.sendEmailVerification()
-            
+
             let newUser = User(
                 id: result.user.uid,
                 name: fullName,
                 email: email,
                 paypalId: paypalId,
-                isEmailVerified: false
+                isEmailVerified: false,
+                address: address,
+                countryCode: countryCode
             )
-            
+
             try await saveUser(newUser)
             
             // Send welcome email

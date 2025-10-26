@@ -376,14 +376,8 @@ struct MemberRoleRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Avatar
-            Text(user.initials)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .frame(width: 44, height: 44)
-                .background(role.accentColor)
-                .cornerRadius(22)
+            // Profile Picture
+            ProfileImageView(user: user, size: 48)
 
             // User info
             VStack(alignment: .leading, spacing: 4) {

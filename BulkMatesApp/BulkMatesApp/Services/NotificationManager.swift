@@ -60,9 +60,12 @@ class NotificationManager: ObservableObject {
         creatorName: String,
         groupMembers: [String]
     ) async throws {
+        // Get creator's profile image URL
+        let creatorProfileImageURL = try? await FirebaseManager.shared.getUser(uid: creatorUserId).profileImageURL
+
         // Send notification to all group members except the creator
         let recipients = groupMembers.filter { $0 != creatorUserId }
-        
+
         for recipientUserId in recipients {
             let notification = Notification(
                 type: .tripInvitation,
@@ -71,9 +74,10 @@ class NotificationManager: ObservableObject {
                 recipientUserId: recipientUserId,
                 senderUserId: creatorUserId,
                 senderName: creatorName,
+                senderProfileImageURL: creatorProfileImageURL,
                 relatedId: tripId
             )
-            
+
             try await saveNotification(notification)
         }
     }
@@ -86,23 +90,26 @@ class NotificationManager: ObservableObject {
         recipientEmail: String
     ) async throws {
         print("🔍 Looking for user with email: \(recipientEmail)")
-        
+
+        // Get inviter's profile image URL
+        let inviterProfileImageURL = try? await FirebaseManager.shared.getUser(uid: inviterUserId).profileImageURL
+
         // First, find the user by email (if they exist)
         let userSnapshot = try await firestore.collection("users")
             .whereField("email", isEqualTo: recipientEmail)
             .getDocuments()
-        
+
         print("📊 Found \(userSnapshot.documents.count) users with email \(recipientEmail)")
-        
+
         guard let userDocument = userSnapshot.documents.first else {
             // User doesn't exist yet, they'll get the notification when they sign up
             print("❌ User with email \(recipientEmail) not found - notification will be created when they sign up")
             return
         }
-        
+
         let recipientUserId = userDocument.documentID
         print("✅ Found user \(recipientUserId) for email \(recipientEmail)")
-        
+
         let notification = Notification(
             type: .groupInvitation,
             title: "Group Invitation",
@@ -110,9 +117,10 @@ class NotificationManager: ObservableObject {
             recipientUserId: recipientUserId,
             senderUserId: inviterUserId,
             senderName: inviterName,
+            senderProfileImageURL: inviterProfileImageURL,
             relatedId: groupId
         )
-        
+
         try await saveNotification(notification)
         print("🔔 Group invitation notification created for user \(recipientUserId)")
     }
@@ -125,6 +133,9 @@ class NotificationManager: ObservableObject {
         itemsCount: Int,
         tripStore: String
     ) async throws {
+        // Get claimer's profile image URL
+        let claimerProfileImageURL = try? await FirebaseManager.shared.getUser(uid: claimerUserId).profileImageURL
+
         let notification = Notification(
             type: .tripUpdate,
             title: "Item Request Received",
@@ -132,9 +143,10 @@ class NotificationManager: ObservableObject {
             recipientUserId: tripOrganizerId,
             senderUserId: claimerUserId,
             senderName: claimerName,
+            senderProfileImageURL: claimerProfileImageURL,
             relatedId: tripId
         )
-        
+
         try await saveNotification(notification)
         print("🔔 Claim notification created for trip organizer \(tripOrganizerId)")
     }
@@ -147,6 +159,9 @@ class NotificationManager: ObservableObject {
         itemName: String,
         quantity: Int
     ) async throws {
+        // Get requester's profile image URL
+        let requesterProfileImageURL = try? await FirebaseManager.shared.getUser(uid: requesterUserId).profileImageURL
+
         let notification = Notification(
             type: .tripUpdate,
             title: "New Item Request",
@@ -154,13 +169,14 @@ class NotificationManager: ObservableObject {
             recipientUserId: tripOrganizerId,
             senderUserId: requesterUserId,
             senderName: requesterName,
+            senderProfileImageURL: requesterProfileImageURL,
             relatedId: tripId
         )
-        
+
         try await saveNotification(notification)
         print("🔔 Item request notification created for trip organizer \(tripOrganizerId)")
     }
-    
+
     func createItemApprovalNotification(
         tripId: String,
         requesterUserId: String,
@@ -169,6 +185,9 @@ class NotificationManager: ObservableObject {
         itemName: String,
         quantity: Int
     ) async throws {
+        // Get organizer's profile image URL
+        let organizerProfileImageURL = try? await FirebaseManager.shared.getUser(uid: organizerUserId).profileImageURL
+
         let notification = Notification(
             type: .tripUpdate,
             title: "Item Request Approved!",
@@ -176,9 +195,10 @@ class NotificationManager: ObservableObject {
             recipientUserId: requesterUserId,
             senderUserId: organizerUserId,
             senderName: organizerName,
+            senderProfileImageURL: organizerProfileImageURL,
             relatedId: tripId
         )
-        
+
         try await saveNotification(notification)
         print("🔔 Item approval notification created for requester \(requesterUserId)")
     }
@@ -236,7 +256,7 @@ class NotificationManager: ObservableObject {
     // MARK: - Private Methods
     
     private func saveNotification(_ notification: Notification) async throws {
-        let notificationData: [String: Any] = [
+        var notificationData: [String: Any] = [
             "id": notification.id,
             "type": notification.type.rawValue,
             "title": notification.title,
@@ -249,7 +269,12 @@ class NotificationManager: ObservableObject {
             "isRead": notification.isRead,
             "status": notification.status.rawValue
         ]
-        
+
+        // Include sender profile image URL if available
+        if let profileImageURL = notification.senderProfileImageURL {
+            notificationData["senderProfileImageURL"] = profileImageURL
+        }
+
         try await firestore.collection("notifications")
             .document(notification.id)
             .setData(notificationData)
@@ -257,7 +282,7 @@ class NotificationManager: ObservableObject {
     
     private func parseNotification(from document: QueryDocumentSnapshot) -> Notification? {
         let data = document.data()
-        
+
         guard let typeString = data["type"] as? String,
               let type = NotificationType(rawValue: typeString),
               let title = data["title"] as? String,
@@ -268,12 +293,13 @@ class NotificationManager: ObservableObject {
               let relatedId = data["relatedId"] as? String else {
             return nil
         }
-        
+
         let createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
         let isRead = data["isRead"] as? Bool ?? false
         let statusString = data["status"] as? String ?? "pending"
         let status = NotificationStatus(rawValue: statusString) ?? .pending
-        
+        let senderProfileImageURL = data["senderProfileImageURL"] as? String
+
         return Notification(
             id: document.documentID,
             type: type,
@@ -282,6 +308,7 @@ class NotificationManager: ObservableObject {
             recipientUserId: recipientUserId,
             senderUserId: senderUserId,
             senderName: senderName,
+            senderProfileImageURL: senderProfileImageURL,
             relatedId: relatedId,
             createdAt: createdAt,
             isRead: isRead,

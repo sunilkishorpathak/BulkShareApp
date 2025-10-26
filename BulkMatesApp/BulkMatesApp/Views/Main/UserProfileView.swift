@@ -7,6 +7,8 @@
 
 import SwiftUI
 import FirebaseAuth
+import FirebaseStorage
+import FirebaseFirestore
 
 struct UserProfileView: View {
     @EnvironmentObject var firebaseManager: FirebaseManager
@@ -19,7 +21,24 @@ struct UserProfileView: View {
     @State private var showingPrivacyPolicy = false
     @State private var showingTermsOfService = false
     @State private var showingAcknowledgments = false
-    
+
+    // Profile image states
+    @State private var selectedProfileImage: UIImage? = nil
+    @State private var showProfileImageOptions = false
+    @State private var showImagePicker = false
+    @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
+    @State private var isUploadingImage = false
+    @State private var showRemovePhotoConfirmation = false
+
+    // Address states
+    @State private var showEditAddress = false
+    @State private var addressVisibility: AddressVisibility = .fullAddress
+
+    // Security states
+    @State private var biometricEnabled = false
+    @State private var showBiometricError = false
+    @State private var biometricErrorMessage = ""
+
     // Computed properties for safe data access
     private var userEmail: String {
         return firebaseManager.currentUser?.email ?? 
@@ -50,10 +69,13 @@ struct UserProfileView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 24) {
-                            // Profile Header
-                            ProfileHeaderView(
-                                userName: userName,
-                                userEmail: userEmail
+                            // Profile Header with editable profile picture
+                            EditableProfileHeaderView(
+                                user: firebaseManager.currentUser,
+                                selectedImage: $selectedProfileImage,
+                                isUploading: isUploadingImage,
+                                onEditPhoto: { showProfileImageOptions = true },
+                                onRemovePhoto: { showRemovePhotoConfirmation = true }
                             )
                             
                             // Account Settings Section
@@ -64,7 +86,7 @@ struct UserProfileView: View {
                                     value: userEmail,
                                     action: nil
                                 )
-                                
+
                                 ProfileSettingsRow(
                                     icon: "checkmark.shield",
                                     title: "Email Verified",
@@ -72,7 +94,81 @@ struct UserProfileView: View {
                                     action: nil
                                 )
                             }
-                            
+
+                            // Address Section
+                            SettingsSection(title: "Address") {
+                                ProfileSettingsRow(
+                                    icon: "location.circle",
+                                    title: "Location",
+                                    value: firebaseManager.currentUser?.address?.shortAddress ?? "Add your address",
+                                    action: { showEditAddress = true }
+                                )
+
+                                // Address Visibility Picker
+                                if firebaseManager.currentUser?.address != nil {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
+                                            Image(systemName: "eye.circle")
+                                                .foregroundColor(.bulkSharePrimary)
+                                                .frame(width: 24)
+
+                                            Text("Who can see")
+                                                .font(.body)
+                                                .foregroundColor(.bulkShareTextDark)
+
+                                            Spacer()
+
+                                            Picker("", selection: $addressVisibility) {
+                                                ForEach(AddressVisibility.allCases, id: \.self) { visibility in
+                                                    Text(visibility.rawValue).tag(visibility)
+                                                }
+                                            }
+                                            .pickerStyle(MenuPickerStyle())
+                                            .tint(.bulkSharePrimary)
+                                        }
+                                        .padding()
+
+                                        Text(addressVisibility.description)
+                                            .font(.caption)
+                                            .foregroundColor(.bulkShareTextMedium)
+                                            .padding(.horizontal)
+                                            .padding(.bottom, 8)
+                                    }
+                                }
+                            }
+
+                            // Security Section
+                            SettingsSection(title: "Security") {
+                                // Biometric toggle
+                                VStack(alignment: .leading, spacing: 0) {
+                                    HStack {
+                                        Image(systemName: biometricIconName)
+                                            .foregroundColor(.bulkSharePrimary)
+                                            .frame(width: 24)
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(biometricLabel)
+                                                .font(.body)
+                                                .foregroundColor(.bulkShareTextDark)
+
+                                            if BiometricAuth.shared.isAvailable() {
+                                                Text("Unlock app with biometrics")
+                                                    .font(.caption)
+                                                    .foregroundColor(.bulkShareTextMedium)
+                                            }
+                                        }
+
+                                        Spacer()
+
+                                        Toggle("", isOn: $biometricEnabled)
+                                            .labelsHidden()
+                                            .tint(.bulkSharePrimary)
+                                            .disabled(!BiometricAuth.shared.isAvailable())
+                                    }
+                                    .padding()
+                                }
+                            }
+
                             // Privacy & Data Section
                             SettingsSection(title: "Privacy & Data") {
                                 ProfileSettingsRow(
@@ -173,18 +269,184 @@ struct UserProfileView: View {
             .sheet(isPresented: $showingAcknowledgments) {
                 AcknowledgmentsView()
             }
+            .sheet(isPresented: $showEditAddress) {
+                if let user = firebaseManager.currentUser {
+                    EditAddressView(user: user)
+                        .environmentObject(firebaseManager)
+                }
+            }
+            .confirmationDialog("Profile Picture", isPresented: $showProfileImageOptions, titleVisibility: .visible) {
+                Button("Take Photo") {
+                    imageSourceType = .camera
+                    showImagePicker = true
+                }
+                Button("Choose from Library") {
+                    imageSourceType = .photoLibrary
+                    showImagePicker = true
+                }
+                if firebaseManager.currentUser?.profileImageURL != nil {
+                    Button("Remove Photo", role: .destructive) {
+                        showRemovePhotoConfirmation = true
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Update your profile picture")
+            }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePickerView(image: $selectedProfileImage, sourceType: imageSourceType)
+                    .onDisappear {
+                        if selectedProfileImage != nil {
+                            uploadProfileImage()
+                        }
+                    }
+            }
+            .alert("Remove Profile Picture?", isPresented: $showRemovePhotoConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Remove", role: .destructive) {
+                    removeProfileImage()
+                }
+            } message: {
+                Text("Your profile will show your initials instead")
+            }
+            .alert("Biometric Error", isPresented: $showBiometricError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(biometricErrorMessage)
+            }
+            .onChange(of: addressVisibility) { newValue in
+                updateAddressVisibility(newValue)
+            }
+            .onChange(of: biometricEnabled) { newValue in
+                if newValue {
+                    enableBiometric()
+                } else {
+                    disableBiometric()
+                }
+            }
+            .onAppear {
+                loadUserSettings()
+            }
+        }
+    }
+
+    // MARK: - Computed Properties
+
+    private var biometricIconName: String {
+        switch BiometricAuth.shared.biometricType() {
+        case .faceID:
+            return "faceid"
+        case .touchID:
+            return "touchid"
+        case .none:
+            return "lock.fill"
+        }
+    }
+
+    private var biometricLabel: String {
+        switch BiometricAuth.shared.biometricType() {
+        case .faceID:
+            return "Face ID"
+        case .touchID:
+            return "Touch ID"
+        case .none:
+            return "Biometric not available"
+        }
+    }
+
+    // MARK: - Helper Functions
+
+    private func loadUserSettings() {
+        if let user = firebaseManager.currentUser {
+            addressVisibility = user.addressVisibility
+            biometricEnabled = user.biometricEnabled
+
+            // Load from UserDefaults as well for biometric
+            if let currentUserId = Auth.auth().currentUser?.uid {
+                let savedBiometric = UserDefaults.standard.bool(forKey: "biometricEnabled_\(currentUserId)")
+                biometricEnabled = savedBiometric
+            }
+        }
+    }
+
+    private func updateAddressVisibility(_ visibility: AddressVisibility) {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+
+        let db = Firestore.firestore()
+        db.collection("users").document(currentUserId).updateData([
+            "addressVisibility": visibility.rawValue
+        ]) { error in
+            if let error = error {
+                print("Error updating address visibility: \(error)")
+            } else {
+                // Update local user object
+                if var user = firebaseManager.currentUser {
+                    user.addressVisibility = visibility
+                    firebaseManager.currentUser = user
+                }
+            }
+        }
+    }
+
+    private func enableBiometric() {
+        BiometricAuth.shared.authenticate(reason: "Enable biometric authentication for BulkMates") { success, error in
+            if success {
+                // Update in Firestore
+                if let currentUserId = Auth.auth().currentUser?.uid {
+                    let db = Firestore.firestore()
+                    db.collection("users").document(currentUserId).updateData([
+                        "biometricEnabled": true
+                    ])
+
+                    // Save to UserDefaults
+                    UserDefaults.standard.set(true, forKey: "biometricEnabled_\(currentUserId)")
+
+                    // Update local user object
+                    if var user = firebaseManager.currentUser {
+                        user.biometricEnabled = true
+                        firebaseManager.currentUser = user
+                    }
+                }
+            } else {
+                // Reset toggle if authentication failed
+                DispatchQueue.main.async {
+                    self.biometricEnabled = false
+                    if let error = error {
+                        self.biometricErrorMessage = error.localizedDescription
+                        self.showBiometricError = true
+                    }
+                }
+            }
+        }
+    }
+
+    private func disableBiometric() {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+
+        let db = Firestore.firestore()
+        db.collection("users").document(currentUserId).updateData([
+            "biometricEnabled": false
+        ])
+
+        // Remove from UserDefaults
+        UserDefaults.standard.set(false, forKey: "biometricEnabled_\(currentUserId)")
+
+        // Update local user object
+        if var user = firebaseManager.currentUser {
+            user.biometricEnabled = false
+            firebaseManager.currentUser = user
         }
     }
     
     private func handleDeleteAccount() {
         isDeleting = true
-        
+
         Task {
             let result = await firebaseManager.deleteAccount()
-            
+
             DispatchQueue.main.async {
                 self.isDeleting = false
-                
+
                 switch result {
                 case .success:
                     // Account deleted successfully, user will be automatically signed out
@@ -197,14 +459,237 @@ struct UserProfileView: View {
             }
         }
     }
+
+    private func uploadProfileImage() {
+        guard let image = selectedProfileImage else { return }
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+
+        isUploadingImage = true
+
+        // Compress image (profile pictures should be smaller)
+        guard let imageData = image.jpegData(compressionQuality: 0.5) else {
+            isUploadingImage = false
+            errorMessage = "Failed to process image"
+            showingError = true
+            return
+        }
+
+        let storageRef = Storage.storage().reference()
+        let imageName = "profile_\(currentUserId).jpg"
+        let imageRef = storageRef.child("profile_images/\(imageName)")
+
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+
+        imageRef.putData(imageData, metadata: metadata) { metadata, error in
+            if let error = error {
+                print("Error uploading profile image: \(error)")
+                DispatchQueue.main.async {
+                    self.isUploadingImage = false
+                    self.errorMessage = "Failed to upload profile picture: \(error.localizedDescription)"
+                    self.showingError = true
+                }
+                return
+            }
+
+            imageRef.downloadURL { url, error in
+                if let error = error {
+                    print("Error getting download URL: \(error)")
+                    DispatchQueue.main.async {
+                        self.isUploadingImage = false
+                        self.errorMessage = "Failed to get image URL: \(error.localizedDescription)"
+                        self.showingError = true
+                    }
+                    return
+                }
+
+                if let urlString = url?.absoluteString {
+                    updateUserProfileImage(urlString)
+                }
+            }
+        }
+    }
+
+    private func updateUserProfileImage(_ imageURL: String) {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+
+        // Update Firestore
+        let db = Firestore.firestore()
+        db.collection("users").document(currentUserId).updateData([
+            "profileImageURL": imageURL
+        ]) { error in
+            DispatchQueue.main.async {
+                self.isUploadingImage = false
+
+                if let error = error {
+                    print("Error updating profile image: \(error)")
+                    self.errorMessage = "Failed to save profile picture: \(error.localizedDescription)"
+                    self.showingError = true
+                } else {
+                    // Update local user object
+                    if var user = self.firebaseManager.currentUser {
+                        user.profileImageURL = imageURL
+                        self.firebaseManager.currentUser = user
+                    }
+                    self.selectedProfileImage = nil
+                }
+            }
+        }
+    }
+
+    private func removeProfileImage() {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+
+        isUploadingImage = true
+
+        // Remove from Firestore
+        let db = Firestore.firestore()
+        db.collection("users").document(currentUserId).updateData([
+            "profileImageURL": FieldValue.delete()
+        ]) { error in
+            DispatchQueue.main.async {
+                self.isUploadingImage = false
+
+                if let error = error {
+                    print("Error removing profile image: \(error)")
+                    self.errorMessage = "Failed to remove profile picture: \(error.localizedDescription)"
+                    self.showingError = true
+                } else {
+                    // Update local state
+                    if var user = self.firebaseManager.currentUser {
+                        user.profileImageURL = nil
+                        self.firebaseManager.currentUser = user
+                    }
+                    self.selectedProfileImage = nil
+                }
+            }
+        }
+
+        // Optionally delete from Storage (keeping for potential re-use)
+    }
 }
 
 // MARK: - Supporting Views
 
+struct EditableProfileHeaderView: View {
+    let user: User?
+    @Binding var selectedImage: UIImage?
+    let isUploading: Bool
+    let onEditPhoto: () -> Void
+    let onRemovePhoto: () -> Void
+
+    private var userName: String {
+        user?.displayName ?? "User"
+    }
+
+    private var userEmail: String {
+        user?.email ?? "No email"
+    }
+
+    private var userInitials: String {
+        guard let user = user else { return "U" }
+        return user.initials
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // Profile Image / Initials with Edit Button
+            ZStack(alignment: .bottomTrailing) {
+                // Main profile image
+                Group {
+                    if let selectedImage = selectedImage {
+                        // Show newly selected image
+                        Image(uiImage: selectedImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 120, height: 120)
+                            .clipShape(Circle())
+                    } else if let imageURL = user?.profileImageURL, let url = URL(string: imageURL) {
+                        // Show current profile image from URL
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 120, height: 120)
+                                    .clipShape(Circle())
+                            case .failure(_), .empty:
+                                defaultImageView
+                            @unknown default:
+                                defaultImageView
+                            }
+                        }
+                    } else {
+                        // Show default initials
+                        defaultImageView
+                    }
+                }
+                .overlay(
+                    Circle()
+                        .stroke(Color.bulkSharePrimary.opacity(0.2), lineWidth: 2)
+                )
+                .overlay(
+                    Group {
+                        if isUploading {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.black.opacity(0.5))
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            }
+                        }
+                    }
+                )
+
+                // Edit button overlay
+                Button(action: onEditPhoto) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.bulkSharePrimary)
+                            .frame(width: 36, height: 36)
+
+                        Image(systemName: "camera.fill")
+                            .foregroundColor(.white)
+                            .font(.system(size: 16))
+                    }
+                }
+                .offset(x: -4, y: -4)
+                .disabled(isUploading)
+            }
+
+            // User Name and Email
+            VStack(spacing: 4) {
+                Text(userName)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.bulkShareTextDark)
+
+                Text(userEmail)
+                    .font(.subheadline)
+                    .foregroundColor(.bulkShareTextMedium)
+            }
+        }
+        .padding(.vertical)
+    }
+
+    private var defaultImageView: some View {
+        ZStack {
+            Circle()
+                .fill(Color.bulkSharePrimary.opacity(0.1))
+                .frame(width: 120, height: 120)
+
+            Text(userInitials)
+                .font(.system(size: 48, weight: .semibold))
+                .foregroundColor(.bulkSharePrimary)
+        }
+    }
+}
+
 struct ProfileHeaderView: View {
     let userName: String
     let userEmail: String
-    
+
     private var userInitials: String {
         let components = userName.split(separator: " ")
         if components.count >= 2 {
@@ -214,7 +699,7 @@ struct ProfileHeaderView: View {
         }
         return "U"
     }
-    
+
     var body: some View {
         VStack(spacing: 16) {
             // Profile Image / Initials
@@ -222,20 +707,20 @@ struct ProfileHeaderView: View {
                 Circle()
                     .fill(Color.bulkSharePrimary.opacity(0.1))
                     .frame(width: 80, height: 80)
-                
+
                 Text(userInitials)
                     .font(.title)
                     .fontWeight(.semibold)
                     .foregroundColor(.bulkSharePrimary)
             }
-            
+
             // User Name
             VStack(spacing: 4) {
                 Text(userName)
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.bulkShareTextDark)
-                
+
                 Text(userEmail)
                     .font(.subheadline)
                     .foregroundColor(.bulkShareTextMedium)

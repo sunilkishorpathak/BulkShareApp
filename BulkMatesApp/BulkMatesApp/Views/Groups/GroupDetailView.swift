@@ -672,36 +672,30 @@ struct MemberRow: View {
     let user: User
     let group: Group
     let isActualMember: Bool
-    
+
     var body: some View {
         HStack {
-            // Avatar
-            Text(user.initials)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .frame(width: 44, height: 44)
-                .background(Color.bulkSharePrimary)
-                .cornerRadius(22)
-            
+            // Profile Picture
+            ProfileImageView(user: user, size: 48)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(user.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.bulkShareTextDark)
-                
+
                 Text(user.email)
                     .font(.caption)
                     .foregroundColor(.bulkShareTextMedium)
             }
-            
+
             Spacer()
-            
+
             VStack(alignment: .trailing, spacing: 2) {
                 if user.id == group.adminId {
                     Badge(text: "Admin", color: .bulkShareInfo)
                 }
-                
+
                 // Status indicator
                 HStack(spacing: 4) {
                     Circle()

@@ -19,5 +19,7 @@
 	<string>BulkMates needs camera access to take photos of items or receipts for your plans</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>BulkMates needs photo library access to choose photos for plan items</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>BulkMates uses Face ID to securely log you in and protect your account</string>
 </dict>
 </plist>

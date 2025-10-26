@@ -15,6 +15,58 @@
 
 import Foundation
 
+// MARK: - Address Model
+
+struct Address: Codable, Equatable {
+    var street: String?
+    var city: String
+    var state: String
+    var postalCode: String
+    var country: String
+    var latitude: Double?
+    var longitude: Double?
+
+    var fullAddress: String {
+        var components: [String] = []
+        if let street = street, !street.isEmpty {
+            components.append(street)
+        }
+        components.append(city)
+        components.append(state)
+        components.append(postalCode)
+        components.append(country)
+        return components.joined(separator: ", ")
+    }
+
+    var shortAddress: String {
+        return "\(city), \(state)"
+    }
+}
+
+enum AddressVisibility: String, Codable, CaseIterable {
+    case fullAddress = "Full Address"
+    case cityOnly = "City Only"
+    case hidden = "Hidden"
+
+    var description: String {
+        switch self {
+        case .fullAddress:
+            return "Show full address to group members"
+        case .cityOnly:
+            return "Show only city and state"
+        case .hidden:
+            return "Keep address private"
+        }
+    }
+}
+
+enum AuthMethod: String, Codable {
+    case email = "Email"
+    case phone = "Phone"
+}
+
+// MARK: - User Model
+
 struct User: Identifiable, Codable, Equatable {
     let id: String
     var name: String
@@ -23,15 +75,33 @@ struct User: Identifiable, Codable, Equatable {
     let createdAt: Date
     var profileImageURL: String?
     var isEmailVerified: Bool
-    
+
+    // Address fields
+    var address: Address?
+    var addressVisibility: AddressVisibility
+    var countryCode: String?
+
+    // Authentication fields
+    var phoneNumber: String?
+    var preferredAuthMethod: AuthMethod
+    var biometricEnabled: Bool
+    var lastLoginDate: Date?
+
     // MARK: - Initializers
-    init(id: String = UUID().uuidString, 
-         name: String, 
-         email: String, 
-         paypalId: String, 
+    init(id: String = UUID().uuidString,
+         name: String,
+         email: String,
+         paypalId: String,
          createdAt: Date = Date(),
          profileImageURL: String? = nil,
-         isEmailVerified: Bool = false) {
+         isEmailVerified: Bool = false,
+         address: Address? = nil,
+         addressVisibility: AddressVisibility = .fullAddress,
+         countryCode: String? = nil,
+         phoneNumber: String? = nil,
+         preferredAuthMethod: AuthMethod = .email,
+         biometricEnabled: Bool = false,
+         lastLoginDate: Date? = nil) {
         self.id = id
         self.name = name
         self.email = email
@@ -39,6 +109,13 @@ struct User: Identifiable, Codable, Equatable {
         self.createdAt = createdAt
         self.profileImageURL = profileImageURL
         self.isEmailVerified = isEmailVerified
+        self.address = address
+        self.addressVisibility = addressVisibility
+        self.countryCode = countryCode
+        self.phoneNumber = phoneNumber
+        self.preferredAuthMethod = preferredAuthMethod
+        self.biometricEnabled = biometricEnabled
+        self.lastLoginDate = lastLoginDate
     }
     
     // MARK: - Computed Properties
@@ -56,6 +133,19 @@ struct User: Identifiable, Codable, Equatable {
         return name.isEmpty ? email : name
     }
     
+    var displayAddressForVisibility: String? {
+        guard let address = address else { return nil }
+
+        switch addressVisibility {
+        case .fullAddress:
+            return address.fullAddress
+        case .cityOnly:
+            return address.shortAddress
+        case .hidden:
+            return nil
+        }
+    }
+
     // MARK: - Equatable Implementation
     static func == (lhs: User, rhs: User) -> Bool {
         return lhs.id == rhs.id &&
@@ -63,8 +153,10 @@ struct User: Identifiable, Codable, Equatable {
                lhs.email == rhs.email &&
                lhs.paypalId == rhs.paypalId &&
                lhs.profileImageURL == rhs.profileImageURL &&
-               lhs.isEmailVerified == rhs.isEmailVerified
-        // Note: Excluding createdAt from comparison as it shouldn't change
+               lhs.isEmailVerified == rhs.isEmailVerified &&
+               lhs.address == rhs.address &&
+               lhs.phoneNumber == rhs.phoneNumber
+        // Note: Excluding createdAt and lastLoginDate from comparison as they're time-based
     }
 }
 

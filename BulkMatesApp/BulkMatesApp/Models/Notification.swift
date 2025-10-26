@@ -15,11 +15,12 @@ struct Notification: Identifiable, Codable {
     let recipientUserId: String
     let senderUserId: String
     let senderName: String
+    let senderProfileImageURL: String? // Profile picture URL of sender
     let relatedId: String // groupId, tripId, etc.
     let createdAt: Date
     var isRead: Bool
     var status: NotificationStatus
-    
+
     init(
         id: String = UUID().uuidString,
         type: NotificationType,
@@ -28,6 +29,7 @@ struct Notification: Identifiable, Codable {
         recipientUserId: String,
         senderUserId: String,
         senderName: String,
+        senderProfileImageURL: String? = nil,
         relatedId: String,
         createdAt: Date = Date(),
         isRead: Bool = false,
@@ -40,6 +42,7 @@ struct Notification: Identifiable, Codable {
         self.recipientUserId = recipientUserId
         self.senderUserId = senderUserId
         self.senderName = senderName
+        self.senderProfileImageURL = senderProfileImageURL
         self.relatedId = relatedId
         self.createdAt = createdAt
         self.isRead = isRead
