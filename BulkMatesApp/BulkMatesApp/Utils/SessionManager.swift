@@ -122,7 +122,7 @@ class SessionManager: ObservableObject {
 
         // Post notification to update UI
         DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .sessionExpired, object: nil)
+            NotificationCenter.default.post(name: NSNotification.Name.sessionExpired, object: nil)
         }
     }
 
@@ -186,8 +186,8 @@ class SessionManager: ObservableObject {
 
 // MARK: - Notification Names
 
-extension Notification.Name {
-    static let sessionExpired = Notification.Name("sessionExpired")
+extension NSNotification.Name {
+    static let sessionExpired = NSNotification.Name("sessionExpired")
 }
 
 // MARK: - UserDefaults Extension
