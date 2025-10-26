@@ -31,6 +31,7 @@ struct TripDetailView: View {
     @State private var itemSort: ItemSort = .name
     @State private var itemComments: [ItemComment] = []
     @State private var showingMembersView = false
+    @State private var showingActivityFeed = false
 
     private var totalCost: Double {
         return selectedItems.reduce(0) { total, selection in
@@ -181,14 +182,36 @@ struct TripDetailView: View {
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
-                ShareLink(item: "Check out this bulk sharing plan!") {
-                    Image(systemName: "square.and.arrow.up")
+                HStack(spacing: 16) {
+                    // Activity feed button
+                    Button(action: {
+                        showingActivityFeed = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                            if trip.activityCount > 0 {
+                                Text("\(trip.activityCount)")
+                                    .font(.caption)
+                            }
+                        }
                         .foregroundColor(.bulkSharePrimary)
+                    }
+
+                    ShareLink(item: "Check out this bulk sharing plan!") {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.bulkSharePrimary)
+                    }
                 }
             }
         }
         .sheet(isPresented: $showingMembersView) {
             TripMembersView(trip: trip)
+        }
+        .sheet(isPresented: $showingActivityFeed) {
+            NavigationView {
+                PlanActivityFeedView(trip: trip)
+                    .environmentObject(FirebaseManager.shared)
+            }
         }
         .alert("Confirm Selection", isPresented: $showingJoinAlert) {
             Button("Cancel", role: .cancel) { }

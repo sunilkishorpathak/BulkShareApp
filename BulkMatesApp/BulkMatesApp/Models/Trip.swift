@@ -128,6 +128,10 @@ struct Trip: Identifiable, Codable {
     var participants: [String] // User IDs who joined
     var notes: String?
 
+    // MARK: - Activity Feed Properties
+    var activityCount: Int = 0  // Total activities
+    var lastActivityTimestamp: Date?  // Last activity posted
+
     // MARK: - Role Management Properties
     var creatorId: String // User who created the trip
     var adminIds: [String] // Users with admin access
@@ -146,6 +150,8 @@ struct Trip: Identifiable, Codable {
          createdAt: Date = Date(),
          participants: [String] = [],
          notes: String? = nil,
+         activityCount: Int = 0,
+         lastActivityTimestamp: Date? = nil,
          creatorId: String = "",
          adminIds: [String] = [],
          viewerIds: [String] = []) {
@@ -161,6 +167,8 @@ struct Trip: Identifiable, Codable {
         self.createdAt = createdAt
         self.participants = participants
         self.notes = notes
+        self.activityCount = activityCount
+        self.lastActivityTimestamp = lastActivityTimestamp
         self.creatorId = creatorId
         self.adminIds = adminIds
         self.viewerIds = viewerIds
