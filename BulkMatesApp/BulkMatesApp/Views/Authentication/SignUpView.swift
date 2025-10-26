@@ -357,6 +357,18 @@ struct SignUpView: View {
                 case .password:
                     focusedField = .confirmPassword
                 case .confirmPassword:
+                    if showAddressFields {
+                        focusedField = .street
+                    } else if isFormValid {
+                        handleSignUp()
+                    }
+                case .street:
+                    focusedField = .city
+                case .city:
+                    focusedField = .state
+                case .state:
+                    focusedField = .postalCode
+                case .postalCode:
                     if isFormValid {
                         handleSignUp()
                     }
