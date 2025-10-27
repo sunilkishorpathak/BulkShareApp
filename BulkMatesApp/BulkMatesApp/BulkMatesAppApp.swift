@@ -10,8 +10,11 @@ import Firebase
 
 @main
 struct BulkMatesAppApp: App {
+    // Connect AppDelegate for push notification handling
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject private var firebaseManager = FirebaseManager.shared
-    
+
     init() {
         // Configure Firebase when the app launches
         FirebaseApp.configure()

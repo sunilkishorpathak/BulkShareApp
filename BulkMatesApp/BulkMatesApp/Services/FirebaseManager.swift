@@ -964,9 +964,10 @@ class FirebaseManager: ObservableObject {
             let resetTime = data["resetTime"] as? Int
             
             // Rate limit check passed, send SMS
+            // For simulator/testing: Pass self as uiDelegate to enable reCAPTCHA
             let verificationID = try await PhoneAuthProvider.provider().verifyPhoneNumber(
-                phoneNumber, 
-                uiDelegate: nil
+                phoneNumber,
+                uiDelegate: nil  // TODO: Implement AuthUIDelegate for reCAPTCHA support
             )
             
             return PhoneVerificationResult(
