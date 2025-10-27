@@ -942,54 +942,40 @@ class FirebaseManager: ObservableObject {
     }
     
     func sendPhoneVerification(phoneNumber: String) async throws -> PhoneVerificationResult {
-        // Optional rate limiting with Cloud Function
-        var attemptsRemaining = 3
-        var resetTime: Int? = nil
+        print("📞 Starting phone verification for: \(phoneNumber)")
 
-        // Try to check rate limits (skip if Cloud Function not deployed)
-        let functions = Functions.functions()
-        let checkRateLimit = functions.httpsCallable("checkSMSRateLimit")
+        // Default values (no rate limiting)
+        let attemptsRemaining = 3
+        let resetTime: Int? = nil
 
+        // SKIP rate limiting for now - can be added later with Cloud Functions
+        // The Cloud Function is causing crashes, so we'll send SMS directly
+        print("📝 Skipping rate limit check (Cloud Function not configured)")
+
+        // Send SMS verification directly
         do {
-            let rateLimitResult = try await checkRateLimit.call(["phoneNumber": phoneNumber])
+            print("📤 Calling Firebase Phone Auth...")
 
-            if let data = rateLimitResult.data as? [String: Any] {
-                if let allowed = data["allowed"] as? Bool, !allowed {
-                    let message = data["message"] as? String ?? "Rate limit exceeded"
-                    let resetTimeValue = data["resetTime"] as? Int
-                    throw PhoneVerificationError.rateLimitExceeded(message: message, resetTime: resetTimeValue)
-                }
-
-                attemptsRemaining = data["attemptsRemaining"] as? Int ?? 3
-                resetTime = data["resetTime"] as? Int
-            }
-        } catch let error as NSError {
-            // If Cloud Function doesn't exist or fails, just log and continue
-            if error.domain == FunctionsErrorDomain {
-                print("⚠️ Rate limit check unavailable: \(error.localizedDescription)")
-                print("📝 Continuing without rate limiting...")
-            } else {
-                // Re-throw if it's a rate limit exceeded error
-                throw error
-            }
-        }
-
-        // Send SMS verification
-        do {
             let verificationID = try await PhoneAuthProvider.provider().verifyPhoneNumber(
                 phoneNumber,
                 uiDelegate: nil
             )
 
             print("✅ Verification SMS sent successfully")
+            print("🔑 Verification ID: \(verificationID)")
 
             return PhoneVerificationResult(
                 verificationID: verificationID,
                 attemptsRemaining: attemptsRemaining,
                 resetTime: resetTime
             )
-        } catch {
-            print("❌ Failed to send verification SMS: \(error.localizedDescription)")
+        } catch let error as NSError {
+            print("❌ Failed to send verification SMS")
+            print("❌ Error domain: \(error.domain)")
+            print("❌ Error code: \(error.code)")
+            print("❌ Error description: \(error.localizedDescription)")
+            print("❌ Error user info: \(error.userInfo)")
+
             throw PhoneVerificationError.sendFailed(error.localizedDescription)
         }
     }
