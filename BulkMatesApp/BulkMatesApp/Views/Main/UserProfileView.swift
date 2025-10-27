@@ -54,183 +54,210 @@ struct UserProfileView: View {
     }
     
     private var userName: String {
-        return firebaseManager.currentUser?.displayName ?? 
-               Auth.auth().currentUser?.displayName ?? 
+        return firebaseManager.currentUser?.displayName ??
+               Auth.auth().currentUser?.displayName ??
                "User"
     }
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                Color.bulkShareBackground.ignoresSafeArea()
-                
-                if isDeleting {
-                    DeletingAccountView()
-                } else {
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            // Profile Header with editable profile picture
-                            EditableProfileHeaderView(
-                                user: firebaseManager.currentUser,
-                                selectedImage: $selectedProfileImage,
-                                isUploading: isUploadingImage,
-                                onEditPhoto: { showProfileImageOptions = true },
-                                onRemovePhoto: { showRemovePhotoConfirmation = true }
-                            )
-                            
-                            // Account Settings Section
-                            SettingsSection(title: "Account") {
-                                ProfileSettingsRow(
-                                    icon: "person.circle",
-                                    title: "Email",
-                                    value: userEmail,
-                                    action: nil
-                                )
 
-                                ProfileSettingsRow(
-                                    icon: "checkmark.shield",
-                                    title: "Email Verified",
-                                    value: userEmailVerified,
-                                    action: nil
-                                )
-                            }
+    // MARK: - View Components
 
-                            // Address Section
-                            SettingsSection(title: "Address") {
-                                ProfileSettingsRow(
-                                    icon: "location.circle",
-                                    title: "Location",
-                                    value: firebaseManager.currentUser?.address?.shortAddress ?? "Add your address",
-                                    action: { showEditAddress = true }
-                                )
+    private var mainContent: some View {
+        ZStack {
+            Color.bulkShareBackground.ignoresSafeArea()
 
-                                // Address Visibility Picker
-                                if firebaseManager.currentUser?.address != nil {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack {
-                                            Image(systemName: "eye.circle")
-                                                .foregroundColor(.bulkSharePrimary)
-                                                .frame(width: 24)
+            if isDeleting {
+                DeletingAccountView()
+            } else {
+                profileScrollView
+            }
+        }
+    }
 
-                                            Text("Who can see")
-                                                .font(.body)
-                                                .foregroundColor(.bulkShareTextDark)
+    private var profileScrollView: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                profileHeader
+                accountSection
+                addressSection
+                securitySection
+                privacySection
+                dangerZoneSection
+                accountInfoSection
+            }
+            .padding()
+        }
+    }
 
-                                            Spacer()
+    private var profileHeader: some View {
+        EditableProfileHeaderView(
+            user: firebaseManager.currentUser,
+            selectedImage: $selectedProfileImage,
+            isUploading: isUploadingImage,
+            onEditPhoto: { showProfileImageOptions = true },
+            onRemovePhoto: { showRemovePhotoConfirmation = true }
+        )
+    }
 
-                                            Picker("", selection: $addressVisibility) {
-                                                ForEach(AddressVisibility.allCases, id: \.self) { visibility in
-                                                    Text(visibility.rawValue).tag(visibility)
-                                                }
-                                            }
-                                            .pickerStyle(MenuPickerStyle())
-                                            .tint(.bulkSharePrimary)
-                                        }
-                                        .padding()
+    private var accountSection: some View {
+        SettingsSection(title: "Account") {
+            ProfileSettingsRow(
+                icon: "person.circle",
+                title: "Email",
+                value: userEmail,
+                action: nil
+            )
 
-                                        Text(addressVisibility.description)
-                                            .font(.caption)
-                                            .foregroundColor(.bulkShareTextMedium)
-                                            .padding(.horizontal)
-                                            .padding(.bottom, 8)
-                                    }
-                                }
-                            }
+            ProfileSettingsRow(
+                icon: "checkmark.shield",
+                title: "Email Verified",
+                value: userEmailVerified,
+                action: nil
+            )
+        }
+    }
 
-                            // Security Section
-                            SettingsSection(title: "Security") {
-                                // Biometric toggle
-                                VStack(alignment: .leading, spacing: 0) {
-                                    HStack {
-                                        Image(systemName: biometricIconName)
-                                            .foregroundColor(.bulkSharePrimary)
-                                            .frame(width: 24)
+    private var addressSection: some View {
+        SettingsSection(title: "Address") {
+            ProfileSettingsRow(
+                icon: "location.circle",
+                title: "Location",
+                value: firebaseManager.currentUser?.address?.shortAddress ?? "Add your address",
+                action: { showEditAddress = true }
+            )
 
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(biometricLabel)
-                                                .font(.body)
-                                                .foregroundColor(.bulkShareTextDark)
+            if firebaseManager.currentUser?.address != nil {
+                addressVisibilityPicker
+            }
+        }
+    }
 
-                                            if BiometricAuth.shared.isAvailable() {
-                                                Text("Unlock app with biometrics")
-                                                    .font(.caption)
-                                                    .foregroundColor(.bulkShareTextMedium)
-                                            }
-                                        }
+    private var addressVisibilityPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "eye.circle")
+                    .foregroundColor(.bulkSharePrimary)
+                    .frame(width: 24)
 
-                                        Spacer()
+                Text("Who can see")
+                    .font(.body)
+                    .foregroundColor(.bulkShareTextDark)
 
-                                        Toggle("", isOn: $biometricEnabled)
-                                            .labelsHidden()
-                                            .tint(.bulkSharePrimary)
-                                            .disabled(!BiometricAuth.shared.isAvailable())
-                                    }
-                                    .padding()
-                                }
-                            }
+                Spacer()
 
-                            // Privacy & Data Section
-                            SettingsSection(title: "Privacy & Data") {
-                                ProfileSettingsRow(
-                                    icon: "doc.text",
-                                    title: "Privacy Policy",
-                                    value: "",
-                                    action: { showingPrivacyPolicy = true }
-                                )
-                                
-                                ProfileSettingsRow(
-                                    icon: "doc.plaintext",
-                                    title: "Terms of Service",
-                                    value: "",
-                                    action: { showingTermsOfService = true }
-                                )
-                                
-                                ProfileSettingsRow(
-                                    icon: "hand.thumbsup",
-                                    title: "Acknowledgments",
-                                    value: "",
-                                    action: { showingAcknowledgments = true }
-                                )
-                                
-                                ProfileSettingsRow(
-                                    icon: "envelope.badge",
-                                    title: "Email Debug (Dev)",
-                                    value: "",
-                                    action: { showingEmailDebug = true }
-                                )
-                            }
-                            
-                            // Danger Zone Section
-                            SettingsSection(title: "Danger Zone") {
-                                DangerousSettingsRow(
-                                    icon: "trash",
-                                    title: "Delete Account",
-                                    subtitle: "Permanently delete your account and all data",
-                                    action: {
-                                        showingDeleteConfirmation = true
-                                    }
-                                )
-                            }
-                            
-                            // Account Info
-                            VStack(spacing: 8) {
-                                if let user = firebaseManager.currentUser {
-                                    Text("Account created: \(user.createdAt.formatted(date: .abbreviated, time: .omitted))")
-                                        .font(.caption)
-                                        .foregroundColor(.bulkShareTextMedium)
-                                } else {
-                                    Text("Loading account information...")
-                                        .font(.caption)
-                                        .foregroundColor(.bulkShareTextMedium)
-                                        .italic()
-                                }
-                            }
-                            .padding(.top, 20)
-                        }
-                        .padding()
+                Picker("", selection: $addressVisibility) {
+                    ForEach(AddressVisibility.allCases, id: \.self) { visibility in
+                        Text(visibility.rawValue).tag(visibility)
                     }
                 }
+                .pickerStyle(MenuPickerStyle())
+                .tint(.bulkSharePrimary)
             }
+            .padding()
+
+            Text(addressVisibility.description)
+                .font(.caption)
+                .foregroundColor(.bulkShareTextMedium)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+        }
+    }
+
+    private var securitySection: some View {
+        SettingsSection(title: "Security") {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Image(systemName: biometricIconName)
+                        .foregroundColor(.bulkSharePrimary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(biometricLabel)
+                            .font(.body)
+                            .foregroundColor(.bulkShareTextDark)
+
+                        if BiometricAuth.shared.isAvailable() {
+                            Text("Unlock app with biometrics")
+                                .font(.caption)
+                                .foregroundColor(.bulkShareTextMedium)
+                        }
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: $biometricEnabled)
+                        .labelsHidden()
+                        .tint(.bulkSharePrimary)
+                        .disabled(!BiometricAuth.shared.isAvailable())
+                }
+                .padding()
+            }
+        }
+    }
+
+    private var privacySection: some View {
+        SettingsSection(title: "Privacy & Data") {
+            ProfileSettingsRow(
+                icon: "doc.text",
+                title: "Privacy Policy",
+                value: "",
+                action: { showingPrivacyPolicy = true }
+            )
+
+            ProfileSettingsRow(
+                icon: "doc.plaintext",
+                title: "Terms of Service",
+                value: "",
+                action: { showingTermsOfService = true }
+            )
+
+            ProfileSettingsRow(
+                icon: "hand.thumbsup",
+                title: "Acknowledgments",
+                value: "",
+                action: { showingAcknowledgments = true }
+            )
+
+            ProfileSettingsRow(
+                icon: "envelope.badge",
+                title: "Email Debug (Dev)",
+                value: "",
+                action: { showingEmailDebug = true }
+            )
+        }
+    }
+
+    private var dangerZoneSection: some View {
+        SettingsSection(title: "Danger Zone") {
+            DangerousSettingsRow(
+                icon: "trash",
+                title: "Delete Account",
+                subtitle: "Permanently delete your account and all data",
+                action: {
+                    showingDeleteConfirmation = true
+                }
+            )
+        }
+    }
+
+    private var accountInfoSection: some View {
+        VStack(spacing: 8) {
+            if let user = firebaseManager.currentUser {
+                Text("Account created: \(user.createdAt.formatted(date: .abbreviated, time: .omitted))")
+                    .font(.caption)
+                    .foregroundColor(.bulkShareTextMedium)
+            } else {
+                Text("Loading account information...")
+                    .font(.caption)
+                    .foregroundColor(.bulkShareTextMedium)
+                    .italic()
+            }
+        }
+        .padding(.top, 20)
+    }
+
+    var body: some View {
+        NavigationView {
+            mainContent
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
