@@ -944,19 +944,34 @@ class FirebaseManager: ObservableObject {
     func sendPhoneVerification(phoneNumber: String) async throws -> PhoneVerificationResult {
         print("📞 Starting phone verification for: \(phoneNumber)")
 
+        // Verify Firebase is configured
+        guard FirebaseApp.app() != nil else {
+            print("❌ Firebase not configured!")
+            throw PhoneVerificationError.sendFailed("Firebase not configured")
+        }
+        print("✅ Firebase app configured")
+
+        // Verify Auth is available
+        let auth = Auth.auth()
+        print("✅ Auth instance: \(auth)")
+        print("✅ Auth app: \(auth.app?.name ?? "nil")")
+
         // Default values (no rate limiting)
         let attemptsRemaining = 3
         let resetTime: Int? = nil
 
         // SKIP rate limiting for now - can be added later with Cloud Functions
-        // The Cloud Function is causing crashes, so we'll send SMS directly
         print("📝 Skipping rate limit check (Cloud Function not configured)")
 
         // Send SMS verification directly
         do {
-            print("📤 Calling Firebase Phone Auth...")
+            print("📤 Getting PhoneAuthProvider...")
+            let provider = PhoneAuthProvider.provider()
+            print("✅ Provider obtained: \(provider)")
 
-            let verificationID = try await PhoneAuthProvider.provider().verifyPhoneNumber(
+            print("📤 Calling verifyPhoneNumber for: \(phoneNumber)")
+
+            let verificationID = try await provider.verifyPhoneNumber(
                 phoneNumber,
                 uiDelegate: nil
             )
