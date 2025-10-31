@@ -51,11 +51,11 @@ struct SignUpView: View {
                 .allowsHitTesting(false)
             
             ScrollView {
-                LazyVStack(spacing: 20) {
+                VStack(spacing: 20) {
                     // Top spacing
-                    Spacer()
+                    Color.clear
                         .frame(height: 20)
-                    
+
                     // Logo and Branding
                     VStack(spacing: 16) {
                         // Logo - Circle of Friends App Icon
@@ -338,10 +338,10 @@ struct SignUpView: View {
                             .font(.subheadline)
                         }
                     }
-                    
-                    // Bottom spacing
-                    Spacer()
-                        .frame(height: 50)
+
+                    // Bottom spacing for keyboard
+                    Color.clear
+                        .frame(height: 100)
                 }
                 .padding(.horizontal, 24)
             }
@@ -385,6 +385,18 @@ struct SignUpView: View {
                     Image(systemName: "arrow.left")
                         .foregroundColor(.white)
                         .fontWeight(.semibold)
+                }
+            }
+
+            // Keyboard dismiss button
+            ToolbarItem(placement: .keyboard) {
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        focusedField = nil
+                    }
+                    .foregroundColor(.bulkSharePrimary)
+                    .fontWeight(.semibold)
                 }
             }
         }
