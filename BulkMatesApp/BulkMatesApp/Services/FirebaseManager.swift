@@ -10,6 +10,51 @@ import Firebase
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFunctions
+import UIKit
+
+// MARK: - Custom Auth UI Delegate for reCAPTCHA
+class PhoneAuthUIDelegate: NSObject, AuthUIDelegate {
+    func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+        print("📱 Presenting reCAPTCHA view controller")
+
+        // Get the top-most view controller
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootViewController = window.rootViewController {
+
+            var topController = rootViewController
+            while let presentedViewController = topController.presentedViewController {
+                topController = presentedViewController
+            }
+
+            topController.present(viewControllerToPresent, animated: flag, completion: completion)
+            print("✅ reCAPTCHA view controller presented")
+        } else {
+            print("❌ Could not find root view controller to present reCAPTCHA")
+            completion?()
+        }
+    }
+
+    func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        print("📱 Dismissing reCAPTCHA view controller")
+
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootViewController = window.rootViewController {
+
+            var topController = rootViewController
+            while let presentedViewController = topController.presentedViewController {
+                topController = presentedViewController
+            }
+
+            topController.dismiss(animated: flag, completion: completion)
+            print("✅ reCAPTCHA view controller dismissed")
+        } else {
+            print("❌ Could not find view controller to dismiss")
+            completion?()
+        }
+    }
+}
 
 class FirebaseManager: ObservableObject {
     static let shared = FirebaseManager()
@@ -973,9 +1018,13 @@ class FirebaseManager: ObservableObject {
 
             print("📤 Calling verifyPhoneNumber for: \(phoneNumber)")
 
+            // Create custom UI delegate for reCAPTCHA verification
+            let uiDelegate = PhoneAuthUIDelegate()
+            print("✅ Created PhoneAuthUIDelegate for reCAPTCHA flow")
+
             let verificationID = try await provider.verifyPhoneNumber(
                 phoneNumber,
-                uiDelegate: nil
+                uiDelegate: uiDelegate
             )
 
             print("✅ Verification SMS sent successfully")
