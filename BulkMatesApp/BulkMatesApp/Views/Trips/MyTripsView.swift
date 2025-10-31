@@ -126,6 +126,7 @@ struct MyTripsView: View {
             }
             .navigationTitle("My Plans")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .sheet(isPresented: $showingTripFlow, onDismiss: {
                 // Refresh trips when sheet is dismissed
                 loadUserTrips()

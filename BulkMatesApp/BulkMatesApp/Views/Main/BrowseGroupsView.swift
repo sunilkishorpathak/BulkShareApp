@@ -81,6 +81,7 @@ struct BrowseGroupsView: View {
             }
             .navigationTitle("Browse Groups")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .onAppear {
                 Task { await loadAllGroups() }
             }

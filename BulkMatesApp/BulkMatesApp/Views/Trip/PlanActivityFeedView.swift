@@ -70,6 +70,7 @@ struct PlanActivityFeedView: View {
         }
         .navigationTitle("Activity")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.light, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showAddActivity = true }) {
