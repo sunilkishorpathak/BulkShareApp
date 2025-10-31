@@ -26,9 +26,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             print("🔥 Firebase already configured")
         }
 
-        // DO NOT register for remote notifications - we're using pure reCAPTCHA mode
-        // APNs token setting was causing crashes, so we're using reCAPTCHA only
-        print("ℹ️ Skipping remote notification registration - using reCAPTCHA-only mode")
+        // Register for remote notifications
+        // Let Firebase's automatic swizzling handle APNs token setup
+        print("ℹ️ Registering for remote notifications - Firebase will auto-handle APNs")
+        registerForRemoteNotifications(application)
 
         return true
     }
@@ -59,12 +60,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) {
         print("✅ APNs registration successful")
         print("📱 Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
+        print("ℹ️ Firebase swizzling will automatically handle APNs token setup")
 
-        // NOTE: We're NOT setting the APNs token to Firebase Auth because it's causing crashes
-        // Instead, we'll rely on reCAPTCHA verification which doesn't require APNs
-        // This is a valid fallback for phone verification
-        print("ℹ️ Skipping APNs token setup - will use reCAPTCHA verification instead")
-        print("ℹ️ Phone verification will work via reCAPTCHA flow")
+        // NOTE: We're NOT manually calling Auth.auth().setAPNSToken() here
+        // because that was causing crashes. Instead, Firebase's automatic swizzling
+        // will intercept this method and handle APNs token setup automatically.
+        // If that fails, Firebase will fall back to reCAPTCHA verification.
     }
 
     // Called when APNs registration fails
