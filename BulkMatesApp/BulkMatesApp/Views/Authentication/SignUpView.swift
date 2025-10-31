@@ -346,7 +346,6 @@ struct SignUpView: View {
                 .padding(.horizontal, 24)
             }
             .scrollDismissesKeyboard(.interactively)
-            .keyboardAdaptive()
             .scrollIndicators(.hidden)
             .onSubmit {
                 switch focusedField {
@@ -476,33 +475,6 @@ struct SignUpView: View {
         let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
         let emailPredicate = NSPredicate(format:"SELF MATCHES %@", emailRegex)
         return emailPredicate.evaluate(with: email)
-    }
-}
-
-// MARK: - Keyboard Adaptive Modifier
-extension View {
-    func keyboardAdaptive() -> some View {
-        self.modifier(KeyboardAdaptive())
-    }
-}
-
-struct KeyboardAdaptive: ViewModifier {
-    @State private var keyboardHeight: CGFloat = 0
-    
-    func body(content: Content) -> some View {
-        content
-            .padding(.bottom, keyboardHeight)
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
-                guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    keyboardHeight = keyboardFrame.height
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    keyboardHeight = 0
-                }
-            }
     }
 }
 
