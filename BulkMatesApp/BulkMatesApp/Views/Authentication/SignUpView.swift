@@ -226,8 +226,6 @@ struct SignUpView: View {
                                             Picker("Country", selection: $selectedCountry) {
                                                 ForEach(countries, id: \.code) { country in
                                                     HStack(spacing: 8) {
-                                                        Text(country.phoneCode)
-                                                            .fontWeight(.medium)
                                                         Text(country.flag)
                                                         Text(country.name)
                                                     }
