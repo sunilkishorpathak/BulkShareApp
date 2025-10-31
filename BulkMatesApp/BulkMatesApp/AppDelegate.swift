@@ -26,31 +26,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             print("🔥 Firebase already configured")
         }
 
-        // DO NOT register for remote notifications
-        // This forces Firebase to use pure reCAPTCHA mode
-        print("ℹ️ NOT registering for remote notifications - forcing pure reCAPTCHA mode")
-        print("ℹ️ Phone auth will show reCAPTCHA web view")
+        // MUST register for remote notifications to satisfy Firebase's checks
+        // Even though we won't use APNs, we need this to avoid ERROR_NOTIFICATION_NOT_FORWARDED
+        print("ℹ️ Registering for remote notifications (required by Firebase)")
+        application.registerForRemoteNotifications()
 
         return true
-    }
-
-    // Register for remote notifications
-    private func registerForRemoteNotifications(_ application: UIApplication) {
-        if #available(iOS 10.0, *) {
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-                if granted {
-                    DispatchQueue.main.async {
-                        application.registerForRemoteNotifications()
-                    }
-                } else {
-                    print("❌ Notification permission denied: \(error?.localizedDescription ?? "Unknown error")")
-                }
-            }
-        } else {
-            let settings = UIUserNotificationSettings(types: [.alert, .badge, .sound], categories: nil)
-            application.registerUserNotificationSettings(settings)
-            application.registerForRemoteNotifications()
-        }
     }
 
     // Called when APNs registration succeeds
@@ -58,13 +39,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
-        print("✅ APNs registration successful - device can receive notifications")
-        print("📱 Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
+        print("✅ APNs device token received")
+        print("📱 Token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
 
-        // DO NOT call setAPNSToken - it crashes in Firebase SDK
-        // Instead we rely on reCAPTCHA verification which works via UIDelegate
-        print("ℹ️ Not setting APNs token (causes Firebase crash)")
-        print("ℹ️ Phone verification will use reCAPTCHA flow with UIDelegate")
+        // DO NOT call Auth.auth().setAPNSToken() - it crashes
+        // We're setting up notifications only to satisfy Firebase's checks
+        print("ℹ️ Not configuring APNs with Firebase (will use reCAPTCHA)")
     }
 
     // Called when APNs registration fails
@@ -81,12 +61,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didReceiveRemoteNotification notification: [AnyHashable : Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
+        print("📬 Received remote notification")
+        print("📬 Notification payload: \(notification)")
+
         // Pass notification to Firebase Auth
         if Auth.auth().canHandleNotification(notification) {
+            print("✅ Firebase Auth handled the notification")
             completionHandler(.noData)
             return
         }
 
+        print("ℹ️ Notification not handled by Firebase Auth")
         completionHandler(.newData)
     }
 }
