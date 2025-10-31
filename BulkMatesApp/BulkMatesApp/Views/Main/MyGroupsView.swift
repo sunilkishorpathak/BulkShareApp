@@ -67,6 +67,7 @@ struct MyGroupsView: View {
                         }) {
                             Label("Join Group", systemImage: "person.badge.plus")
                         }
+                        .foregroundStyle(.primary)
 
                         Divider()
 
@@ -75,18 +76,21 @@ struct MyGroupsView: View {
                         }) {
                             Label("Profile & Settings", systemImage: "person.circle")
                         }
+                        .foregroundStyle(.primary)
 
                         Button(action: {
                             Task { await loadUserGroups() }
                         }) {
                             Label("Refresh", systemImage: "arrow.clockwise")
                         }
+                        .foregroundStyle(.primary)
 
                         Button(action: {
                             handleSignOut()
                         }) {
                             Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                         }
+                        .foregroundStyle(.red)
                     } label: {
                         Image(systemName: "ellipsis.circle")
                             .foregroundColor(.bulkSharePrimary)
