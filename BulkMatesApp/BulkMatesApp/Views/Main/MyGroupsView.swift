@@ -58,6 +58,7 @@ struct MyGroupsView: View {
             }
             .navigationTitle("My Groups")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
