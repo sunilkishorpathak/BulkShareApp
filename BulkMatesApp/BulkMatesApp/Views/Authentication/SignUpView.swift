@@ -280,10 +280,7 @@ struct SignUpView: View {
                                             Menu {
                                                 ForEach(countries, id: \.code) { country in
                                                     Button(action: { selectedCountry = country.code }) {
-                                                        HStack(spacing: 8) {
-                                                            Text(country.flag)
-                                                            Text(country.name)
-                                                        }
+                                                        Text("\(country.flag)  \(country.name)")
                                                     }
                                                 }
                                             } label: {
