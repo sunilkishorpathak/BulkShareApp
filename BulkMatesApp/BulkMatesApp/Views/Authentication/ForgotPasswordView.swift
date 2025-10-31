@@ -27,19 +27,20 @@ struct ForgotPasswordView: View {
     
     enum ResetMethod: String, CaseIterable {
         case email = "Email"
-        case phone = "Phone"
+        // Temporarily disabled - phone auth has APNs issues
+        // case phone = "Phone"
         
         var icon: String {
             switch self {
             case .email: return "envelope.fill"
-            case .phone: return "phone.fill"
+            // case .phone: return "phone.fill"
             }
         }
-        
+
         var description: String {
             switch self {
             case .email: return "We'll email you a reset link"
-            case .phone: return "We'll send a code to your phone"
+            // case .phone: return "We'll send a code to your phone"
             }
         }
     }
