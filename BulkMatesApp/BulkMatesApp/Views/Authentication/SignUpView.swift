@@ -339,9 +339,9 @@ struct SignUpView: View {
                         }
                     }
 
-                    // Bottom spacing for keyboard
+                    // Minimal bottom spacing (keyboard adaptive handles the rest)
                     Color.clear
-                        .frame(height: 100)
+                        .frame(height: 20)
                 }
                 .padding(.horizontal, 24)
             }
