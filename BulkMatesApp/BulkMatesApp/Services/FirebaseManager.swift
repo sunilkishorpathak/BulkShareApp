@@ -966,7 +966,9 @@ class FirebaseManager: ObservableObject {
         // Send SMS verification directly
         do {
             print("📤 Getting PhoneAuthProvider...")
-            let provider = PhoneAuthProvider.provider()
+
+            // Use explicit auth instance instead of singleton
+            let provider = PhoneAuthProvider.provider(auth: auth)
             print("✅ Provider obtained: \(provider)")
 
             print("📤 Calling verifyPhoneNumber for: \(phoneNumber)")

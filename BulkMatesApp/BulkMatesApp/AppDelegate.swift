@@ -50,7 +50,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         print("📱 Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
 
         // Pass the device token to Firebase Auth
-        Auth.auth().setAPNSToken(deviceToken, type: .unknown)
+        // Use .sandbox for debug builds, .prod for release/TestFlight
+        #if DEBUG
+        Auth.auth().setAPNSToken(deviceToken, type: .sandbox)
+        print("🔧 APNs token type: SANDBOX (debug build)")
+        #else
+        Auth.auth().setAPNSToken(deviceToken, type: .prod)
+        print("🔧 APNs token type: PRODUCTION (release build)")
+        #endif
     }
 
     // Called when APNs registration fails
