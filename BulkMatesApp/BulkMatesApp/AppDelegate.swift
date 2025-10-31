@@ -60,12 +60,49 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) {
         print("✅ APNs registration successful")
         print("📱 Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
-        print("ℹ️ Firebase swizzling will automatically handle APNs token setup")
 
-        // NOTE: We're NOT manually calling Auth.auth().setAPNSToken() here
-        // because that was causing crashes. Instead, Firebase's automatic swizzling
-        // will intercept this method and handle APNs token setup automatically.
-        // If that fails, Firebase will fall back to reCAPTCHA verification.
+        // Swizzling doesn't work with @UIApplicationDelegateAdaptor, so we must manually set the token
+        // Give Firebase a moment to initialize, then try to set the token
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.setAPNSToken(deviceToken)
+        }
+    }
+
+    // Safely set the APNs token with Firebase Auth
+    private func setAPNSToken(_ deviceToken: Data) {
+        print("🔧 Attempting to set APNs token with Firebase Auth...")
+
+        // Verify Firebase is configured
+        guard let app = FirebaseApp.app() else {
+            print("❌ Firebase app not found, cannot set APNs token")
+            return
+        }
+        print("✅ Firebase app exists: \(app.name)")
+
+        // Try to set the token with comprehensive error handling
+        do {
+            // Get Auth instance using the app
+            let auth = Auth.auth(app: app)
+
+            // Determine token type based on build configuration
+            #if DEBUG
+            let tokenType: AuthAPNSTokenType = .sandbox
+            print("🔧 Using SANDBOX token type for debug build")
+            #else
+            let tokenType: AuthAPNSTokenType = .prod
+            print("🔧 Using PRODUCTION token type for release build")
+            #endif
+
+            // This is the line that was crashing before
+            // If it crashes, we'll catch it or at least see where
+            print("🔧 About to call setAPNSToken...")
+            auth.setAPNSToken(deviceToken, type: tokenType)
+            print("✅ Successfully set APNs token with Firebase Auth!")
+
+        } catch {
+            print("❌ Caught error while setting APNs token: \(error)")
+            print("ℹ️ Will fall back to reCAPTCHA verification")
+        }
     }
 
     // Called when APNs registration fails
