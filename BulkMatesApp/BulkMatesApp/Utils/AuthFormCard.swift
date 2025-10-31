@@ -38,6 +38,7 @@ struct BulkShareTextFieldStyle: TextFieldStyle {
         configuration
             .padding(16)
             .background(Color.bulkShareBackground)
+            .foregroundColor(.bulkShareTextDark)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
