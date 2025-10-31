@@ -25,6 +25,7 @@ struct Group: Identifiable, Codable {
     let createdAt: Date
     var adminId: String
     var isActive: Bool
+    var inviteCode: String // Unique 6-character code for sharing
     
     // MARK: - Initializers
     init(id: String = UUID().uuidString,
@@ -35,7 +36,8 @@ struct Group: Identifiable, Codable {
          icon: String = "👥",
          createdAt: Date = Date(),
          adminId: String,
-         isActive: Bool = true) {
+         isActive: Bool = true,
+         inviteCode: String? = nil) {
         self.id = id
         self.name = name
         self.description = description
@@ -45,6 +47,13 @@ struct Group: Identifiable, Codable {
         self.createdAt = createdAt
         self.adminId = adminId
         self.isActive = isActive
+        self.inviteCode = inviteCode ?? Group.generateInviteCode()
+    }
+
+    // MARK: - Helper Methods
+    static func generateInviteCode() -> String {
+        let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        return String((0..<6).map { _ in characters.randomElement()! })
     }
     
     // MARK: - Computed Properties
@@ -66,7 +75,8 @@ extension Group {
             members: ["user1", "user2", "user3", "user4"],
             invitedEmails: [],
             icon: "👨‍👩‍👧‍👦",
-            adminId: "user1"
+            adminId: "user1",
+            inviteCode: "ABC123"
         ),
         Group(
             name: "Building 7 Neighbors",
@@ -74,7 +84,8 @@ extension Group {
             members: ["user1", "user5", "user6", "user7", "user8"],
             invitedEmails: [],
             icon: "🏢",
-            adminId: "user5"
+            adminId: "user5",
+            inviteCode: "XYZ789"
         ),
         Group(
             name: "Oak Street Community",
@@ -82,7 +93,8 @@ extension Group {
             members: ["user9", "user10", "user11"],
             invitedEmails: [],
             icon: "🏘️",
-            adminId: "user9"
+            adminId: "user9",
+            inviteCode: "OAK456"
         )
     ]
 }

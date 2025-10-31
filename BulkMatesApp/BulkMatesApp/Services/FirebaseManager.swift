@@ -344,9 +344,10 @@ class FirebaseManager: ObservableObject {
             "icon": group.icon,
             "createdAt": group.createdAt,
             "adminId": group.adminId,
-            "isActive": group.isActive
+            "isActive": group.isActive,
+            "inviteCode": group.inviteCode
         ]
-        
+
         let docRef = try await firestore.collection("groups").addDocument(data: groupData)
         return docRef.documentID
     }
@@ -366,7 +367,8 @@ class FirebaseManager: ObservableObject {
                 icon: data["icon"] as? String ?? "👥",
                 createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                 adminId: data["adminId"] as? String ?? "",
-                isActive: data["isActive"] as? Bool ?? true
+                isActive: data["isActive"] as? Bool ?? true,
+                inviteCode: data["inviteCode"] as? String
             )
             
             // Filter active groups client-side
@@ -385,9 +387,10 @@ class FirebaseManager: ObservableObject {
             "invitedEmails": group.invitedEmails,
             "icon": group.icon,
             "adminId": group.adminId,
-            "isActive": group.isActive
+            "isActive": group.isActive,
+            "inviteCode": group.inviteCode
         ]
-        
+
         try await firestore.collection("groups").document(group.id).updateData(groupData)
     }
     
@@ -409,10 +412,52 @@ class FirebaseManager: ObservableObject {
                 icon: data["icon"] as? String ?? "👥",
                 createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                 adminId: data["adminId"] as? String ?? "",
-                isActive: data["isActive"] as? Bool ?? true
+                isActive: data["isActive"] as? Bool ?? true,
+                inviteCode: data["inviteCode"] as? String
             )
         }
     }
+
+    // MARK: - Invite Code Functions
+
+    func findGroupByInviteCode(_ inviteCode: String) async throws -> Group {
+        let snapshot = try await firestore.collection("groups")
+            .whereField("inviteCode", isEqualTo: inviteCode)
+            .whereField("isActive", isEqualTo: true)
+            .limit(to: 1)
+            .getDocuments()
+
+        guard let document = snapshot.documents.first else {
+            throw NSError(domain: "BulkMates", code: 404, userInfo: [NSLocalizedDescriptionKey: "Group not found"])
+        }
+
+        let data = document.data()
+        return Group(
+            id: data["id"] as? String ?? document.documentID,
+            name: data["name"] as? String ?? "",
+            description: data["description"] as? String ?? "",
+            members: data["members"] as? [String] ?? [],
+            invitedEmails: data["invitedEmails"] as? [String] ?? [],
+            icon: data["icon"] as? String ?? "👥",
+            createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+            adminId: data["adminId"] as? String ?? "",
+            isActive: data["isActive"] as? Bool ?? true,
+            inviteCode: data["inviteCode"] as? String
+        )
+    }
+
+    func joinGroupWithInviteCode(groupId: String, userId: String) async throws {
+        let groupRef = firestore.collection("groups").document(groupId)
+
+        try await groupRef.updateData([
+            "members": FieldValue.arrayUnion([userId])
+        ])
+
+        print("✅ User \(userId) successfully joined group \(groupId)")
+    }
+
+    // MARK: - Trip Management
+
     
     func createTrip(_ trip: Trip) async throws -> String {
         let tripData: [String: Any] = [

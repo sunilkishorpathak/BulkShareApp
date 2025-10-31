@@ -24,6 +24,9 @@ struct CreateGroupView: View {
     @State private var showingAlert: Bool = false
     @State private var alertTitle: String = ""
     @State private var alertMessage: String = ""
+    @State private var showingInviteSheet: Bool = false
+    @State private var createdGroupInviteCode: String = ""
+    @State private var createdGroupName: String = ""
     @Environment(\.dismiss) private var dismiss
     
     private let availableIcons = ["👨‍👩‍👧‍👦", "🏢", "🏘️", "👥", "🏠", "🌟", "💚", "🛒"]
@@ -121,48 +124,98 @@ struct CreateGroupView: View {
                         .cornerRadius(16)
                         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
                         
-                        // Add Members Form
+                        // Invite Members Section
                         VStack(alignment: .leading, spacing: 20) {
-                            HStack {
-                                Text("Invite Members")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.bulkShareTextDark)
-                                
-                                Spacer()
-                                
-                                Button(action: addMemberField) {
-                                    Image(systemName: "plus.circle.fill")
+                            Text("Invite Members")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.bulkShareTextDark)
+
+                            // Share Link Method (Primary)
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "link.circle.fill")
                                         .foregroundColor(.bulkSharePrimary)
                                         .font(.title3)
+
+                                    Text("Share Invite Link")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.bulkShareTextDark)
                                 }
+
+                                Text("After creating the group, you'll get a shareable invite link and code")
+                                    .font(.caption)
+                                    .foregroundColor(.bulkShareTextMedium)
+                                    .multilineTextAlignment(.leading)
                             }
-                            
-                            VStack(spacing: 12) {
-                                ForEach(memberEmails.indices, id: \.self) { index in
-                                    HStack {
-                                        TextField("member@email.com", text: $memberEmails[index])
-                                            .textFieldStyle(BulkShareTextFieldStyle())
-                                            .keyboardType(.emailAddress)
-                                            .autocapitalization(.none)
-                                            .autocorrectionDisabled()
-                                        
-                                        if memberEmails.count > 1 {
-                                            Button(action: {
-                                                removeMemberField(at: index)
-                                            }) {
-                                                Image(systemName: "minus.circle.fill")
-                                                    .foregroundColor(.red)
-                                                    .font(.title3)
+                            .padding()
+                            .background(Color.bulkSharePrimary.opacity(0.05))
+                            .cornerRadius(12)
+
+                            // Divider
+                            HStack {
+                                Rectangle()
+                                    .fill(Color.bulkShareTextLight.opacity(0.3))
+                                    .frame(height: 1)
+
+                                Text("OR")
+                                    .font(.caption)
+                                    .foregroundColor(.bulkShareTextLight)
+                                    .padding(.horizontal, 8)
+
+                                Rectangle()
+                                    .fill(Color.bulkShareTextLight.opacity(0.3))
+                                    .frame(height: 1)
+                            }
+
+                            // Email Invite Method (Secondary)
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "envelope.circle.fill")
+                                        .foregroundColor(.bulkShareTextMedium)
+                                        .font(.title3)
+
+                                    Text("Invite by Email (Optional)")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.bulkShareTextDark)
+
+                                    Spacer()
+
+                                    Button(action: addMemberField) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .foregroundColor(.bulkSharePrimary)
+                                            .font(.title3)
+                                    }
+                                }
+
+                                VStack(spacing: 12) {
+                                    ForEach(memberEmails.indices, id: \.self) { index in
+                                        HStack {
+                                            TextField("member@email.com", text: $memberEmails[index])
+                                                .textFieldStyle(BulkShareTextFieldStyle())
+                                                .keyboardType(.emailAddress)
+                                                .autocapitalization(.none)
+                                                .autocorrectionDisabled()
+
+                                            if memberEmails.count > 1 {
+                                                Button(action: {
+                                                    removeMemberField(at: index)
+                                                }) {
+                                                    Image(systemName: "minus.circle.fill")
+                                                        .foregroundColor(.red)
+                                                        .font(.title3)
+                                                }
                                             }
                                         }
                                     }
                                 }
+
+                                Text("Email invitations will be sent to these addresses")
+                                    .font(.caption)
+                                    .foregroundColor(.bulkShareTextLight)
                             }
-                            
-                            Text("Group invitations will be sent to these email addresses")
-                                .font(.caption)
-                                .foregroundColor(.bulkShareTextLight)
                         }
                         .padding()
                         .background(Color.white)
@@ -213,6 +266,13 @@ struct CreateGroupView: View {
                 }
             } message: {
                 Text(alertMessage)
+            }
+            .sheet(isPresented: $showingInviteSheet) {
+                GroupInviteShareSheet(
+                    groupName: createdGroupName,
+                    inviteCode: createdGroupInviteCode,
+                    onDismiss: { dismiss() }
+                )
             }
         }
     }
@@ -294,25 +354,13 @@ struct CreateGroupView: View {
                 
                 DispatchQueue.main.async {
                     self.isLoading = false
-                    
-                    let message: String
-                    if validEmails.isEmpty {
-                        message = "Group \"\(self.groupName)\" has been created!"
-                    } else {
-                        switch emailResult {
-                        case .success:
-                            message = "Group \"\(self.groupName)\" has been created and invitations sent to \(validEmails.count) members. Existing app users will receive notifications."
-                        case .failure(let error):
-                            message = "Group \"\(self.groupName)\" has been created, but failed to send some invitations: \(error.localizedDescription)"
-                        case .none:
-                            message = "Group \"\(self.groupName)\" has been created!"
-                        }
-                    }
-                    
-                    self.showAlert(
-                        title: "Group Created!",
-                        message: message
-                    )
+
+                    // Store invite code and group name for sharing
+                    self.createdGroupInviteCode = group.inviteCode
+                    self.createdGroupName = self.groupName
+
+                    // Show invite sheet to share the code
+                    self.showingInviteSheet = true
                 }
                 
             } catch {
@@ -337,6 +385,192 @@ struct CreateGroupView: View {
         let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
         let emailPredicate = NSPredicate(format:"SELF MATCHES %@", emailRegex)
         return emailPredicate.evaluate(with: email)
+    }
+}
+
+// MARK: - Group Invite Share Sheet
+struct GroupInviteShareSheet: View {
+    let groupName: String
+    let inviteCode: String
+    let onDismiss: () -> Void
+    @State private var showCopiedConfirmation = false
+
+    var shareMessage: String {
+        "Join my BulkMates group '\(groupName)'!\n\nInvite Code: \(inviteCode)\n\nDownload BulkMates and enter this code to join."
+    }
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.bulkShareBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 30) {
+                        // Success Icon
+                        VStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.bulkShareSuccess.opacity(0.1))
+                                    .frame(width: 100, height: 100)
+
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.bulkShareSuccess)
+                            }
+
+                            VStack(spacing: 8) {
+                                Text("Group Created!")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.bulkShareTextDark)
+
+                                Text(groupName)
+                                    .font(.headline)
+                                    .foregroundColor(.bulkShareTextMedium)
+                            }
+                        }
+                        .padding(.top, 20)
+
+                        // Invite Code Card
+                        VStack(spacing: 20) {
+                            Text("Share this code to invite members")
+                                .font(.subheadline)
+                                .foregroundColor(.bulkShareTextMedium)
+
+                            // Large Invite Code Display
+                            VStack(spacing: 12) {
+                                Text("INVITE CODE")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.bulkShareTextLight)
+                                    .tracking(1)
+
+                                Text(inviteCode)
+                                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                                    .foregroundColor(.bulkSharePrimary)
+                                    .tracking(4)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 20)
+                                    .background(Color.bulkSharePrimary.opacity(0.08))
+                                    .cornerRadius(16)
+                            }
+
+                            // Copy Button
+                            Button(action: copyInviteCode) {
+                                HStack {
+                                    Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
+                                    Text(showCopiedConfirmation ? "Copied!" : "Copy Code")
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.bulkSharePrimary.opacity(0.1))
+                                .foregroundColor(.bulkSharePrimary)
+                                .cornerRadius(12)
+                            }
+                        }
+                        .padding(24)
+                        .background(Color.white)
+                        .cornerRadius(20)
+                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+
+                        // Share Options
+                        VStack(spacing: 16) {
+                            Text("Or share via")
+                                .font(.subheadline)
+                                .foregroundColor(.bulkShareTextLight)
+
+                            // Share Button
+                            ShareLink(item: shareMessage) {
+                                HStack {
+                                    Image(systemName: "square.and.arrow.up")
+                                    Text("Share Invite")
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.bulkSharePrimary)
+                                .foregroundColor(.white)
+                                .cornerRadius(14)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+
+                        // Instructions
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundColor(.bulkShareInfo)
+                                Text("How to share")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.bulkShareTextDark)
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                InstructionRow(number: "1", text: "Share the invite code via WhatsApp, Messages, or any app")
+                                InstructionRow(number: "2", text: "Friends download BulkMates and sign up")
+                                InstructionRow(number: "3", text: "They tap 'Join Group' and enter the code")
+                                InstructionRow(number: "4", text: "Start planning together!")
+                            }
+                        }
+                        .padding(20)
+                        .background(Color.bulkShareInfo.opacity(0.05))
+                        .cornerRadius(16)
+                        .padding(.horizontal, 24)
+
+                        // Done Button
+                        Button(action: onDismiss) {
+                            Text("Done")
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.bulkShareTextLight.opacity(0.2))
+                                .foregroundColor(.bulkShareTextDark)
+                                .cornerRadius(14)
+                        }
+                        .padding(.horizontal, 24)
+
+                        Spacer(minLength: 30)
+                    }
+                    .padding(.vertical)
+                }
+            }
+            .navigationTitle("Invite Members")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func copyInviteCode() {
+        UIPasteboard.general.string = inviteCode
+        showCopiedConfirmation = true
+
+        // Reset confirmation after 2 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            showCopiedConfirmation = false
+        }
+    }
+}
+
+struct InstructionRow: View {
+    let number: String
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(number)
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .frame(width: 24, height: 24)
+                .background(Color.bulkSharePrimary)
+                .clipShape(Circle())
+
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.bulkShareTextMedium)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
