@@ -549,6 +549,7 @@ struct AllMembersView: View {
             }
             .navigationTitle(group.name)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
@@ -573,6 +574,7 @@ struct AllTripsView: View {
             }
             .navigationTitle("Group Plans")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
@@ -626,6 +628,7 @@ struct GroupSettingsView: View {
             .background(Color.bulkShareBackground.ignoresSafeArea())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
@@ -866,6 +869,7 @@ struct InviteMembersView: View {
             .background(Color.bulkShareBackground.ignoresSafeArea())
             .navigationTitle("Invite Members")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }
