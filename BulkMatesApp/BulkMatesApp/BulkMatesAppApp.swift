@@ -10,16 +10,17 @@ import Firebase
 
 @main
 struct BulkMatesAppApp: App {
-    // Connect AppDelegate for push notification handling
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    // NO AppDelegate - removing it to let Firebase use pure reCAPTCHA mode
+    // @UIApplicationDelegateAdaptor breaks Firebase swizzling
 
     @StateObject private var firebaseManager = FirebaseManager.shared
 
     init() {
         // Configure Firebase when the app launches
         FirebaseApp.configure()
+        print("🔥 Firebase configured - NO AppDelegate, pure reCAPTCHA mode")
     }
-    
+
     var body: some Scene {
         WindowGroup {
             RootView()
