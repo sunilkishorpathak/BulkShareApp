@@ -71,7 +71,7 @@ struct LoginView: View {
                             .foregroundColor(.white)
 
                         // Tagline
-                        Text("Plan Together, Achieve More")
+                        Text("Connect, Plan, Collaborate")
                             .font(.headline)
                             .foregroundColor(.white.opacity(0.9))
                     }

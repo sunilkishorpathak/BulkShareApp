@@ -50,7 +50,7 @@ struct ContentView: View {
                             .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 2)
 
                         // Tagline
-                        Text("Plan Together, Achieve More")
+                        Text("Connect, Plan, Collaborate")
                             .font(.system(size: 22, weight: .medium))
                             .foregroundColor(.white.opacity(0.95))
                             .multilineTextAlignment(.center)
