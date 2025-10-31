@@ -277,21 +277,32 @@ struct SignUpView: View {
                                                 .font(.caption)
                                                 .foregroundColor(.bulkShareTextMedium)
 
-                                            Picker("Country", selection: $selectedCountry) {
+                                            Menu {
                                                 ForEach(countries, id: \.code) { country in
-                                                    HStack(spacing: 8) {
+                                                    Button(action: { selectedCountry = country.code }) {
+                                                        HStack(spacing: 8) {
+                                                            Text(country.flag)
+                                                            Text(country.name)
+                                                        }
+                                                    }
+                                                }
+                                            } label: {
+                                                HStack(spacing: 8) {
+                                                    if let country = getCountry(byCode: selectedCountry) {
                                                         Text(country.flag)
                                                         Text(country.name)
+                                                            .foregroundColor(.bulkShareTextDark)
                                                     }
-                                                    .tag(country.code)
+                                                    Spacer()
+                                                    Image(systemName: "chevron.down")
+                                                        .font(.caption)
+                                                        .foregroundColor(.bulkShareTextMedium)
                                                 }
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .padding(12)
+                                                .background(Color.gray.opacity(0.08))
+                                                .cornerRadius(8)
                                             }
-                                            .pickerStyle(MenuPickerStyle())
-                                            .tint(.bulkSharePrimary)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(12)
-                                            .background(Color.gray.opacity(0.08))
-                                            .cornerRadius(8)
                                         }
                                     }
                                 }
