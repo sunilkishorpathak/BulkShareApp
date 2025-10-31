@@ -93,7 +93,8 @@ class FirebaseManager: ObservableObject {
         fullName: String,
         paypalId: String,
         address: Address? = nil,
-        countryCode: String? = nil
+        countryCode: String? = nil,
+        phoneNumber: String? = nil
     ) async -> Result<Void, Error> {
         isLoading = true
 
@@ -108,7 +109,8 @@ class FirebaseManager: ObservableObject {
                 paypalId: paypalId,
                 isEmailVerified: false,
                 address: address,
-                countryCode: countryCode
+                countryCode: countryCode,
+                phoneNumber: phoneNumber
             )
 
             try await saveUser(newUser)

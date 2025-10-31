@@ -19,6 +19,10 @@ struct SignUpView: View {
     @State private var navigateToLogin: Bool = false
     @Environment(\.dismiss) private var dismiss
 
+    // Phone number fields
+    @State private var phoneNumber: String = ""
+    @State private var selectedPhoneCountry: String = "US"
+
     // Address fields (optional)
     @State private var street: String = ""
     @State private var city: String = ""
@@ -30,7 +34,7 @@ struct SignUpView: View {
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case fullName, email, password, confirmPassword, street, city, state, postalCode
+        case fullName, email, password, confirmPassword, phoneNumber, street, city, state, postalCode
     }
     
     var body: some View {
@@ -131,12 +135,12 @@ struct SignUpView: View {
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundColor(.bulkShareTextMedium)
-                                
+
                                 SecureField("Confirm your password", text: $confirmPassword)
                                     .textFieldStyle(BulkShareTextFieldStyle())
                                     .focused($focusedField, equals: .confirmPassword)
-                                    .submitLabel(.done)
-                                
+                                    .submitLabel(.next)
+
                                 // Password match indicator
                                 if !confirmPassword.isEmpty {
                                     HStack {
@@ -146,6 +150,56 @@ struct SignUpView: View {
                                             .font(.caption)
                                             .foregroundColor(password == confirmPassword ? .green : .red)
                                     }
+                                }
+                            }
+
+                            // Phone Number Field (Optional)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Phone Number (Optional)")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.bulkShareTextMedium)
+
+                                HStack(spacing: 8) {
+                                    // Country Code Picker
+                                    Menu {
+                                        ForEach(countries, id: \.code) { country in
+                                            Button(action: { selectedPhoneCountry = country.code }) {
+                                                HStack {
+                                                    Text(country.phoneCode)
+                                                        .fontWeight(.medium)
+                                                    Text(country.flag)
+                                                    Text(country.name)
+                                                }
+                                            }
+                                        }
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            if let country = getCountry(byCode: selectedPhoneCountry) {
+                                                Text(country.phoneCode)
+                                                    .fontWeight(.semibold)
+                                                Text(country.flag)
+                                                    .font(.title3)
+                                            }
+                                            Image(systemName: "chevron.down")
+                                                .font(.caption)
+                                        }
+                                        .foregroundColor(.bulkShareTextDark)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 16)
+                                        .background(Color.bulkShareBackground)
+                                        .cornerRadius(12)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(Color.bulkShareTextLight.opacity(0.3), lineWidth: 1)
+                                        )
+                                    }
+
+                                    // Phone Number Input
+                                    TextField("555-123-4567", text: $phoneNumber)
+                                        .textFieldStyle(BulkShareTextFieldStyle())
+                                        .keyboardType(.phonePad)
+                                        .focused($focusedField, equals: .phoneNumber)
                                 }
                             }
 
@@ -356,6 +410,13 @@ struct SignUpView: View {
                 case .password:
                     focusedField = .confirmPassword
                 case .confirmPassword:
+                    // Phone number is optional, skip it
+                    if showAddressFields {
+                        focusedField = .street
+                    } else if isFormValid {
+                        handleSignUp()
+                    }
+                case .phoneNumber:
                     if showAddressFields {
                         focusedField = .street
                     } else if isFormValid {
@@ -439,6 +500,13 @@ struct SignUpView: View {
             )
         }
 
+        // Format phone number with country code if provided
+        var fullPhoneNumber: String? = nil
+        if !phoneNumber.isEmpty {
+            let isdCode = getISDCode(forCountry: selectedPhoneCountry)
+            fullPhoneNumber = "\(isdCode) \(phoneNumber)"
+        }
+
         Task {
             let result = await FirebaseManager.shared.signUp(
                 email: email,
@@ -446,7 +514,8 @@ struct SignUpView: View {
                 fullName: fullName,
                 paypalId: "",
                 address: userAddress,
-                countryCode: selectedCountry
+                countryCode: selectedCountry,
+                phoneNumber: fullPhoneNumber
             )
 
             DispatchQueue.main.async {
