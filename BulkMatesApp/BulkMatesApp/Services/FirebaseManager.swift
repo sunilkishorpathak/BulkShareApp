@@ -154,10 +154,19 @@ class FirebaseManager: ObservableObject {
     }
     
     func sendPasswordReset(email: String) async -> Result<Void, Error> {
+        print("📧 Attempting to send password reset email to: \(email)")
+
         do {
+            // Send password reset email via Firebase
             try await auth.sendPasswordReset(withEmail: email)
+            print("✅ Password reset email sent successfully to: \(email)")
+            print("📬 Check your spam folder if you don't see it in inbox")
             return .success(())
-        } catch {
+        } catch let error as NSError {
+            print("❌ Failed to send password reset email")
+            print("❌ Error domain: \(error.domain)")
+            print("❌ Error code: \(error.code)")
+            print("❌ Error description: \(error.localizedDescription)")
             return .failure(error)
         }
     }
