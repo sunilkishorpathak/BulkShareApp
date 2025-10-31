@@ -16,6 +16,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
     ) -> Bool {
 
+        // Configure Firebase first (if not already configured)
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+            print("🔥 Firebase configured in AppDelegate")
+        } else {
+            print("🔥 Firebase already configured")
+        }
+
         // Register for remote notifications (required for Firebase Phone Auth)
         registerForRemoteNotifications(application)
 
@@ -49,6 +57,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         print("✅ APNs registration successful")
         print("📱 Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
 
+        // Ensure Firebase is configured before accessing Auth
+        guard FirebaseApp.app() != nil else {
+            print("❌ Firebase not configured yet, cannot set APNs token")
+            return
+        }
+
+        print("🔥 Firebase is configured, setting APNs token...")
+
         // Pass the device token to Firebase Auth
         // Use .sandbox for debug builds, .prod for release/TestFlight
         #if DEBUG
@@ -58,6 +74,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         Auth.auth().setAPNSToken(deviceToken, type: .prod)
         print("🔧 APNs token type: PRODUCTION (release build)")
         #endif
+
+        print("✅ APNs token successfully set to Firebase Auth")
     }
 
     // Called when APNs registration fails
