@@ -76,7 +76,7 @@ struct SignUpView: View {
                             .fontWeight(.bold)
                             .foregroundColor(.white)
 
-                        Text("Start sharing today")
+                        Text("Plan Together, Achieve More")
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.9))
                     }
