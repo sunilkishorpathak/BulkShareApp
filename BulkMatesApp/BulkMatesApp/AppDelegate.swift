@@ -7,7 +7,9 @@
 
 import UIKit
 import Firebase
+import FirebaseCore
 import FirebaseAuth
+import UserNotifications
 
 class AppDelegate: NSObject, UIApplicationDelegate {
 
@@ -65,17 +67,34 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
         print("🔥 Firebase is configured, setting APNs token...")
 
-        // Pass the device token to Firebase Auth
-        // Use .sandbox for debug builds, .prod for release/TestFlight
-        #if DEBUG
-        Auth.auth().setAPNSToken(deviceToken, type: .sandbox)
-        print("🔧 APNs token type: SANDBOX (debug build)")
-        #else
-        Auth.auth().setAPNSToken(deviceToken, type: .prod)
-        print("🔧 APNs token type: PRODUCTION (release build)")
-        #endif
+        // Give Firebase Auth a moment to fully initialize before setting token
+        // This prevents crashes from Auth singleton not being fully ready
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Get the default Firebase app
+            guard let app = FirebaseApp.app() else {
+                print("❌ No default Firebase app found")
+                return
+            }
 
-        print("✅ APNs token successfully set to Firebase Auth")
+            print("✅ Got Firebase app: \(app.name)")
+
+            // Get Auth instance for this app
+            let auth = Auth.auth(app: app)
+            print("✅ Got Auth instance for app")
+
+            // Pass the device token to Firebase Auth
+            // Use .sandbox for debug builds, .prod for release/TestFlight
+            #if DEBUG
+            let tokenType: AuthAPNSTokenType = .sandbox
+            print("🔧 Setting APNs token type: SANDBOX (debug build)")
+            #else
+            let tokenType: AuthAPNSTokenType = .prod
+            print("🔧 Setting APNs token type: PRODUCTION (release build)")
+            #endif
+
+            auth.setAPNSToken(deviceToken, type: tokenType)
+            print("✅ APNs token successfully set to Firebase Auth")
+        }
     }
 
     // Called when APNs registration fails
