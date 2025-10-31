@@ -59,42 +59,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         print("✅ APNs registration successful")
         print("📱 Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
 
-        // Ensure Firebase is configured before accessing Auth
-        guard FirebaseApp.app() != nil else {
-            print("❌ Firebase not configured yet, cannot set APNs token")
-            return
-        }
-
-        print("🔥 Firebase is configured, setting APNs token...")
-
-        // Give Firebase Auth a moment to fully initialize before setting token
-        // This prevents crashes from Auth singleton not being fully ready
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            // Get the default Firebase app
-            guard let app = FirebaseApp.app() else {
-                print("❌ No default Firebase app found")
-                return
-            }
-
-            print("✅ Got Firebase app: \(app.name)")
-
-            // Get Auth instance for this app
-            let auth = Auth.auth(app: app)
-            print("✅ Got Auth instance for app")
-
-            // Pass the device token to Firebase Auth
-            // Use .sandbox for debug builds, .prod for release/TestFlight
-            #if DEBUG
-            let tokenType: AuthAPNSTokenType = .sandbox
-            print("🔧 Setting APNs token type: SANDBOX (debug build)")
-            #else
-            let tokenType: AuthAPNSTokenType = .prod
-            print("🔧 Setting APNs token type: PRODUCTION (release build)")
-            #endif
-
-            auth.setAPNSToken(deviceToken, type: tokenType)
-            print("✅ APNs token successfully set to Firebase Auth")
-        }
+        // NOTE: We're NOT setting the APNs token to Firebase Auth because it's causing crashes
+        // Instead, we'll rely on reCAPTCHA verification which doesn't require APNs
+        // This is a valid fallback for phone verification
+        print("ℹ️ Skipping APNs token setup - will use reCAPTCHA verification instead")
+        print("ℹ️ Phone verification will work via reCAPTCHA flow")
     }
 
     // Called when APNs registration fails
