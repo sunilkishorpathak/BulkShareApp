@@ -26,8 +26,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             print("🔥 Firebase already configured")
         }
 
-        // Register for remote notifications (required for Firebase Phone Auth)
-        registerForRemoteNotifications(application)
+        // DO NOT register for remote notifications - we're using pure reCAPTCHA mode
+        // APNs token setting was causing crashes, so we're using reCAPTCHA only
+        print("ℹ️ Skipping remote notification registration - using reCAPTCHA-only mode")
 
         return true
     }
