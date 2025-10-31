@@ -250,19 +250,33 @@ struct LoginView: View {
     // MARK: - Remember Me Functions
 
     private func saveCredentials() {
+        // Save email and Remember Me flag to UserDefaults
         UserDefaults.standard.set(email, forKey: "savedUserId")
         UserDefaults.standard.set(AuthMethod.email.rawValue, forKey: "savedAuthMethod")
         UserDefaults.standard.set(true, forKey: "rememberMe")
 
-        print("✅ Credentials saved for: \(email)")
+        // Save password securely to Keychain
+        let saved = KeychainHelper.shared.savePassword(email: email, password: password)
+
+        if saved {
+            print("✅ Credentials saved securely for: \(email)")
+        } else {
+            print("⚠️ Email saved but password not stored in Keychain")
+        }
     }
 
     private func clearSavedCredentials() {
+        // Clear UserDefaults
         UserDefaults.standard.removeObject(forKey: "savedUserId")
         UserDefaults.standard.removeObject(forKey: "savedAuthMethod")
         UserDefaults.standard.set(false, forKey: "rememberMe")
 
-        print("🗑️ Credentials cleared")
+        // Clear Keychain
+        if let savedEmail = UserDefaults.standard.string(forKey: "savedUserId") {
+            KeychainHelper.shared.deletePassword(for: savedEmail)
+        }
+
+        print("🗑️ Credentials cleared from UserDefaults and Keychain")
     }
 
     private func loadSavedCredentials() {
@@ -287,25 +301,64 @@ struct LoginView: View {
         guard UserDefaults.standard.bool(forKey: "rememberMe"),
               let savedEmail = UserDefaults.standard.string(forKey: "savedUserId"),
               !savedEmail.isEmpty else {
+            print("ℹ️ Biometric login skipped - Remember Me not enabled or no saved email")
             return
         }
 
-        // Get the user ID from email (would need to be stored separately)
-        // For now, we'll just check if biometric is generally enabled
+        // Check if biometric is available
         let biometricEnabled = BiometricAuth.shared.isAvailable()
+        guard biometricEnabled else {
+            print("ℹ️ Biometric login skipped - Biometric not available")
+            return
+        }
 
-        guard biometricEnabled else { return }
+        print("🔐 Attempting biometric authentication...")
 
         // Attempt biometric authentication
         BiometricAuth.shared.authenticate(reason: "Log in to BulkMates") { success, error in
             if success {
                 print("✅ Biometric authentication successful")
-                // Email is already pre-filled from loadSavedCredentials
-                // User still needs to enter password for security
+
+                // Retrieve password from Keychain
+                if let savedPassword = KeychainHelper.shared.getPassword(for: savedEmail) {
+                    print("🔑 Retrieved password from Keychain, signing in...")
+
+                    // Automatically sign in
+                    DispatchQueue.main.async {
+                        self.email = savedEmail
+                        self.password = savedPassword
+                        self.rememberMe = true
+                        self.isLoading = true
+
+                        Task {
+                            let result = await FirebaseManager.shared.signIn(email: savedEmail, password: savedPassword)
+
+                            DispatchQueue.main.async {
+                                self.isLoading = false
+
+                                switch result {
+                                case .success:
+                                    print("✅ Automatic biometric sign-in successful!")
+                                    // FirebaseManager will handle navigation via isAuthenticated
+                                case .failure(let error):
+                                    print("❌ Automatic sign-in failed: \(error.localizedDescription)")
+                                    self.showAlert(message: "Automatic sign-in failed. Please sign in manually.")
+                                    // Clear password field for security
+                                    self.password = ""
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    print("❌ No saved password found in Keychain")
+                    // Email is already pre-filled from loadSavedCredentials
+                    // User needs to enter password manually
+                }
             } else {
                 if let error = error {
                     print("❌ Biometric authentication failed: \(error.localizedDescription)")
                 }
+                // User can still sign in manually
             }
         }
     }
