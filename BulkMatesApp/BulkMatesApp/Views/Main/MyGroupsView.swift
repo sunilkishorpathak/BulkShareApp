@@ -12,6 +12,7 @@ struct MyGroupsView: View {
     @State private var userGroups: [Group] = []
     @State private var isLoading = true
     @State private var showingCreateGroup = false
+    @State private var showingJoinGroup = false
     @State private var showingProfile = false
     @State private var showingError = false
     @State private var errorMessage = ""
@@ -61,17 +62,25 @@ struct MyGroupsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: {
+                            showingJoinGroup = true
+                        }) {
+                            Label("Join Group", systemImage: "person.badge.plus")
+                        }
+
+                        Divider()
+
+                        Button(action: {
                             showingProfile = true
                         }) {
                             Label("Profile & Settings", systemImage: "person.circle")
                         }
-                        
+
                         Button(action: {
                             Task { await loadUserGroups() }
                         }) {
                             Label("Refresh", systemImage: "arrow.clockwise")
                         }
-                        
+
                         Button(action: {
                             handleSignOut()
                         }) {
@@ -85,6 +94,9 @@ struct MyGroupsView: View {
             }
             .sheet(isPresented: $showingCreateGroup) {
                 CreateGroupView()
+            }
+            .sheet(isPresented: $showingJoinGroup) {
+                JoinGroupView()
             }
             .sheet(isPresented: $showingProfile) {
                 UserProfileView()
