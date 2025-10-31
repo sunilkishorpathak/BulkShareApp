@@ -16,6 +16,8 @@ struct UserProfileView: View {
     @State private var showingDeleteConfirmation = false
     @State private var showingError = false
     @State private var errorMessage = ""
+    @State private var showingSuccess = false
+    @State private var successMessage = ""
     @State private var isDeleting = false
     @State private var showingEmailDebug = false
     @State private var showingPrivacyPolicy = false
@@ -266,6 +268,8 @@ struct UserProfileView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .foregroundColor(.bulkSharePrimary)
+                    .fontWeight(.semibold)
                 }
             }
             .confirmationDialog(
@@ -284,6 +288,11 @@ struct UserProfileView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
+            }
+            .alert("Success", isPresented: $showingSuccess) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(successMessage)
             }
             .sheet(isPresented: $showingEmailDebug) {
                 EmailDebugView()
@@ -520,19 +529,35 @@ struct UserProfileView: View {
                 return
             }
 
-            imageRef.downloadURL { url, error in
-                if let error = error {
-                    print("Error getting download URL: \(error)")
-                    DispatchQueue.main.async {
-                        self.isUploadingImage = false
-                        self.errorMessage = "Failed to get image URL: \(error.localizedDescription)"
-                        self.showingError = true
-                    }
-                    return
-                }
+            // Wait a moment for Firebase Storage to make the file available
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                imageRef.downloadURL { url, error in
+                    if let error = error {
+                        print("Error getting download URL: \(error)")
+                        // Retry once after a delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            imageRef.downloadURL { retryUrl, retryError in
+                                if let retryError = retryError {
+                                    print("Error on retry: \(retryError)")
+                                    DispatchQueue.main.async {
+                                        self.isUploadingImage = false
+                                        self.errorMessage = "Failed to get image URL. Please try again."
+                                        self.showingError = true
+                                    }
+                                    return
+                                }
 
-                if let urlString = url?.absoluteString {
-                    updateUserProfileImage(urlString)
+                                if let urlString = retryUrl?.absoluteString {
+                                    self.updateUserProfileImage(urlString)
+                                }
+                            }
+                        }
+                        return
+                    }
+
+                    if let urlString = url?.absoluteString {
+                        self.updateUserProfileImage(urlString)
+                    }
                 }
             }
         }
@@ -560,6 +585,10 @@ struct UserProfileView: View {
                         self.firebaseManager.currentUser = user
                     }
                     self.selectedProfileImage = nil
+
+                    // Show success message
+                    self.successMessage = "Profile picture updated successfully!"
+                    self.showingSuccess = true
                 }
             }
         }
