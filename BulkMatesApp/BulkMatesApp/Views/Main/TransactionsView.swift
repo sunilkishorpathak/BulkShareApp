@@ -64,6 +64,7 @@ struct TransactionsView: View {
             .background(Color.bulkShareBackground.ignoresSafeArea())
             .navigationTitle("Transactions")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .alert(alertTitle, isPresented: $showingAlert) {
                 Button("OK", role: .cancel) { }
             } message: {

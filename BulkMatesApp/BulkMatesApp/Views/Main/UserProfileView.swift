@@ -260,6 +260,7 @@ struct UserProfileView: View {
             mainContent
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
