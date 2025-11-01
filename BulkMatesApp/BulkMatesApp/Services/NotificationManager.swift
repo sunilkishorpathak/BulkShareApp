@@ -26,13 +26,26 @@ class NotificationManager: ObservableObject {
     
     func startListening(for userId: String) {
         print("🎧 NotificationManager: Starting listener for userId: \(userId)")
+
+        // Debug: Check authentication state
+        if let currentUser = Auth.auth().currentUser {
+            print("✅ Auth verified - User authenticated: \(currentUser.uid)")
+            print("📧 Auth email: \(currentUser.email ?? "no email")")
+            print("🔑 Auth token exists: \(currentUser.refreshToken != nil)")
+        } else {
+            print("❌ WARNING: No authenticated user found!")
+        }
+
         stopListening()
-        
+
         notificationListener = firestore.collection("notifications")
             .whereField("recipientUserId", isEqualTo: userId)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let documents = snapshot?.documents else {
                     print("❌ Error fetching notifications: \(error?.localizedDescription ?? "Unknown error")")
+                    if let error = error {
+                        print("🔍 Full error details: \(error)")
+                    }
                     return
                 }
                 
