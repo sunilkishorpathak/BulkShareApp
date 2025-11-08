@@ -154,7 +154,6 @@ struct TripMembersView: View {
                 DispatchQueue.main.async {
                     self.isLoading = false
                 }
-                print("Error loading members: \(error)")
             }
         }
     }
@@ -199,8 +198,8 @@ struct TripMembersView: View {
                     trip.demoteToViewer(userId: user.id)
                 }
 
-                // TODO: Save to Firebase
-                // try await FirebaseManager.shared.updateTrip(trip)
+                // Save to Firebase
+                try await FirebaseManager.shared.updateTrip(trip)
 
                 // Reload members
                 await loadMembers()
@@ -211,13 +210,10 @@ struct TripMembersView: View {
                     self.targetRole = nil
                 }
 
-                print("Role changed for \(user.name) to \(newRole.displayName)")
-
             } catch {
                 DispatchQueue.main.async {
                     self.isLoading = false
                 }
-                print("Error changing role: \(error)")
             }
         }
     }

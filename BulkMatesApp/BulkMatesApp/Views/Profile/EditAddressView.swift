@@ -21,6 +21,7 @@ struct EditAddressView: View {
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showingRemoveConfirmation = false
 
     var isFormValid: Bool {
         !city.isEmpty && !state.isEmpty && !postalCode.isEmpty
@@ -152,6 +153,14 @@ struct EditAddressView: View {
             } message: {
                 Text(errorMessage)
             }
+            .alert("Remove Address?", isPresented: $showingRemoveConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Remove", role: .destructive) {
+                    removeAddress()
+                }
+            } message: {
+                Text("Are you sure you want to remove your saved address?")
+            }
         }
     }
 
@@ -210,8 +219,7 @@ struct EditAddressView: View {
     }
 
     private func showRemoveConfirmation() {
-        // TODO: Implement confirmation alert
-        removeAddress()
+        showingRemoveConfirmation = true
     }
 
     private func removeAddress() {

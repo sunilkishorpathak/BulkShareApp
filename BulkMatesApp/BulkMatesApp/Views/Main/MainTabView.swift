@@ -64,11 +64,9 @@ struct MainTabView: View {
     }
     
     private func startListeningForNotifications() {
-        guard let currentUser = FirebaseManager.shared.currentUser else { 
-            print("⚠️ MainTabView: No current user for notifications")
-            return 
+        guard let currentUser = FirebaseManager.shared.currentUser else {
+            return
         }
-        print("🏠 MainTabView: Starting notifications for user \(currentUser.email)")
         notificationManager.startListening(for: currentUser.id)
     }
 }

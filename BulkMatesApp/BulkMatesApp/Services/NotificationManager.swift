@@ -25,40 +25,74 @@ class NotificationManager: ObservableObject {
     // MARK: - Public Methods
     
     func startListening(for userId: String) {
+        #if DEBUG
         print("🎧 NotificationManager: Starting listener for userId: \(userId)")
-
-        // Debug: Check authentication state
-        if let currentUser = Auth.auth().currentUser {
-            print("✅ Auth verified - User authenticated: \(currentUser.uid)")
-            print("📧 Auth email: \(currentUser.email ?? "no email")")
-            print("🔑 Auth token exists: \(currentUser.refreshToken != nil)")
-        } else {
-            print("❌ WARNING: No authenticated user found!")
-        }
+        #endif
 
         stopListening()
 
+        // Start real-time listener
         notificationListener = firestore.collection("notifications")
             .whereField("recipientUserId", isEqualTo: userId)
+            .order(by: "createdAt", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
-                guard let documents = snapshot?.documents else {
-                    print("❌ Error fetching notifications: \(error?.localizedDescription ?? "Unknown error")")
-                    if let error = error {
-                        print("🔍 Full error details: \(error)")
+                if let error = error {
+                    #if DEBUG
+                    print("❌ Error in notification listener: \(error.localizedDescription)")
+                    #endif
+                    // Fallback: Try manual fetch if listener fails
+                    Task {
+                        await self?.fetchNotificationsManually(for: userId)
                     }
                     return
                 }
-                
-                print("📬 Received \(documents.count) notification documents for user \(userId)")
+
+                guard let documents = snapshot?.documents else {
+                    return
+                }
+
+                #if DEBUG
+                print("📬 Received \(documents.count) notifications")
+                #endif
+
                 let notifications = documents.compactMap { self?.parseNotification(from: $0) }
-                print("📋 Parsed \(notifications.count) valid notifications")
-                
+
                 DispatchQueue.main.async {
                     self?.notifications = notifications
                     self?.updateUnreadCount()
-                    print("🔄 Updated notifications list with \(notifications.count) items")
                 }
             }
+
+        // Also do an initial manual fetch to ensure we get data even if listener is slow
+        Task {
+            await fetchNotificationsManually(for: userId)
+        }
+    }
+
+    // MARK: - Manual Fetch (Fallback)
+
+    func fetchNotificationsManually(for userId: String) async {
+        do {
+            let snapshot = try await firestore.collection("notifications")
+                .whereField("recipientUserId", isEqualTo: userId)
+                .order(by: "createdAt", descending: true)
+                .getDocuments()
+
+            let notifications = snapshot.documents.compactMap { parseNotification(from: $0) }
+
+            DispatchQueue.main.async { [weak self] in
+                self?.notifications = notifications
+                self?.updateUnreadCount()
+            }
+
+            #if DEBUG
+            print("✅ Manual fetch: Found \(notifications.count) notifications")
+            #endif
+        } catch {
+            #if DEBUG
+            print("❌ Manual fetch failed: \(error.localizedDescription)")
+            #endif
+        }
     }
     
     func stopListening() {
@@ -102,8 +136,6 @@ class NotificationManager: ObservableObject {
         inviterName: String,
         recipientEmail: String
     ) async throws {
-        print("🔍 Looking for user with email: \(recipientEmail)")
-
         // Get inviter's profile image URL
         let inviterProfileImageURL = try? await FirebaseManager.shared.getUser(uid: inviterUserId).profileImageURL
 
@@ -112,16 +144,12 @@ class NotificationManager: ObservableObject {
             .whereField("email", isEqualTo: recipientEmail)
             .getDocuments()
 
-        print("📊 Found \(userSnapshot.documents.count) users with email \(recipientEmail)")
-
         guard let userDocument = userSnapshot.documents.first else {
             // User doesn't exist yet, they'll get the notification when they sign up
-            print("❌ User with email \(recipientEmail) not found - notification will be created when they sign up")
             return
         }
 
         let recipientUserId = userDocument.documentID
-        print("✅ Found user \(recipientUserId) for email \(recipientEmail)")
 
         let notification = Notification(
             type: .groupInvitation,
@@ -135,7 +163,6 @@ class NotificationManager: ObservableObject {
         )
 
         try await saveNotification(notification)
-        print("🔔 Group invitation notification created for user \(recipientUserId)")
     }
     
     func createClaimNotification(
@@ -161,9 +188,8 @@ class NotificationManager: ObservableObject {
         )
 
         try await saveNotification(notification)
-        print("🔔 Claim notification created for trip organizer \(tripOrganizerId)")
     }
-    
+
     func createItemRequestNotification(
         tripId: String,
         tripOrganizerId: String,
@@ -187,7 +213,6 @@ class NotificationManager: ObservableObject {
         )
 
         try await saveNotification(notification)
-        print("🔔 Item request notification created for trip organizer \(tripOrganizerId)")
     }
 
     func createItemApprovalNotification(
@@ -213,7 +238,6 @@ class NotificationManager: ObservableObject {
         )
 
         try await saveNotification(notification)
-        print("🔔 Item approval notification created for requester \(requesterUserId)")
     }
     
     func respondToGroupInvitation(

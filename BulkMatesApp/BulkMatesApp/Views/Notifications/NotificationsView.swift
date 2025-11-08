@@ -86,11 +86,9 @@ struct NotificationsView: View {
     }
     
     private func startListeningForNotifications() {
-        guard let currentUser = FirebaseManager.shared.currentUser else { 
-            print("❌ No current user found for notifications")
-            return 
+        guard let currentUser = FirebaseManager.shared.currentUser else {
+            return
         }
-        print("🔔 Starting notification listener for user: \(currentUser.id) (\(currentUser.email))")
         notificationManager.startListening(for: currentUser.id)
     }
     

@@ -15,7 +15,6 @@ import UIKit
 // MARK: - Custom Auth UI Delegate for reCAPTCHA
 class PhoneAuthUIDelegate: NSObject, AuthUIDelegate {
     func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
-        print("📱 Presenting reCAPTCHA view controller")
 
         // Get the top-most view controller
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -28,15 +27,11 @@ class PhoneAuthUIDelegate: NSObject, AuthUIDelegate {
             }
 
             topController.present(viewControllerToPresent, animated: flag, completion: completion)
-            print("✅ reCAPTCHA view controller presented")
-        } else {
-            print("❌ Could not find root view controller to present reCAPTCHA")
             completion?()
         }
     }
 
     func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
-        print("📱 Dismissing reCAPTCHA view controller")
 
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let window = windowScene.windows.first,
@@ -48,9 +43,6 @@ class PhoneAuthUIDelegate: NSObject, AuthUIDelegate {
             }
 
             topController.dismiss(animated: flag, completion: completion)
-            print("✅ reCAPTCHA view controller dismissed")
-        } else {
-            print("❌ Could not find view controller to dismiss")
             completion?()
         }
     }
@@ -295,7 +287,6 @@ class FirebaseManager: ObservableObject {
                     )
                     DispatchQueue.main.async {
                         self.currentUser = basicUser
-                        print("✅ Created basic user from Auth: \(basicUser.email)")
                     }
                 }
             }
@@ -453,7 +444,6 @@ class FirebaseManager: ObservableObject {
             "members": FieldValue.arrayUnion([userId])
         ])
 
-        print("✅ User \(userId) successfully joined group \(groupId)")
     }
 
     func leaveGroup(groupId: String, userId: String) async throws {
@@ -464,7 +454,6 @@ class FirebaseManager: ObservableObject {
             "members": FieldValue.arrayRemove([userId])
         ])
 
-        print("✅ User \(userId) successfully left group \(groupId)")
     }
 
     func deleteGroup(groupId: String) async throws {
@@ -483,7 +472,6 @@ class FirebaseManager: ObservableObject {
         // Step 2: Delete the group document
         try await firestore.collection("groups").document(groupId).delete()
 
-        print("✅ Successfully deleted group \(groupId) and \(tripsSnapshot.documents.count) associated plans")
     }
 
     // MARK: - Trip Management
@@ -575,6 +563,32 @@ class FirebaseManager: ObservableObject {
         )
     }
     
+    func updateTrip(_ trip: Trip) async throws {
+        let tripData: [String: Any] = [
+            "name": trip.name,
+            "tripType": trip.tripType.rawValue,
+            "store": trip.store.rawValue,
+            "scheduledDate": trip.scheduledDate,
+            "status": trip.status.rawValue,
+            "notes": trip.notes ?? "",
+            "adminIds": trip.adminIds,
+            "viewerIds": trip.viewerIds,
+            "items": trip.items.map { item in
+                [
+                    "id": item.id,
+                    "name": item.name,
+                    "quantityAvailable": item.quantityAvailable,
+                    "estimatedPrice": item.estimatedPrice,
+                    "category": item.category.rawValue,
+                    "notes": item.notes ?? "",
+                    "imageURL": item.imageURL ?? ""
+                ]
+            }
+        ]
+
+        try await firestore.collection("trips").document(trip.id).updateData(tripData)
+    }
+
     func getGroup(groupId: String) async throws -> Group {
         let document = try await firestore.collection("groups").document(groupId).getDocument()
         
