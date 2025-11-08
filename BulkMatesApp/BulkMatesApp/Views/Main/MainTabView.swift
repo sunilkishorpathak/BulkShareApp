@@ -40,12 +40,14 @@ struct MainTabView: View {
                     Text("Notifications")
                 }
             
-            // Transactions Tab
+            // Transactions Tab (Coming Soon)
             TransactionsView()
                 .tabItem {
                     Image(systemName: "creditcard")
                     Text("Transactions")
                 }
+                .disabled(true)
+                .grayscale(1.0)
             
             // Profile Tab
             UserProfileView()

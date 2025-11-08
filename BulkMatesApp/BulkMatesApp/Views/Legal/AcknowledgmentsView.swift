@@ -25,37 +25,35 @@ struct AcknowledgmentsView: View {
                         .padding(.bottom, 20)
                     
                     VStack(alignment: .leading, spacing: 20) {
-                        LegalSectionView(title: "Development Team") {
-                            Text("BulkMates was brought to life by:")
-                            
+                        LegalSectionView(title: "Credits") {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack(alignment: .top, spacing: 12) {
                                     Image(systemName: "person.fill")
                                         .foregroundColor(.blue)
                                         .font(.title2)
-                                    
+
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("Sunil Kishor Pathak")
+                                        Text("Sunil Pathak")
                                             .font(.headline)
                                             .fontWeight(.semibold)
-                                        
-                                        Text("Lead Developer - Architected and developed the complete BulkMates application, implementing all core features and functionality.")
+
+                                        Text("Founded and developed by Sunil Pathak")
                                             .font(.body)
                                             .foregroundColor(.primary)
                                     }
                                 }
-                                
+
                                 HStack(alignment: .top, spacing: 12) {
-                                    Image(systemName: "star.fill")
+                                    Image(systemName: "lightbulb.fill")
                                         .foregroundColor(.yellow)
                                         .font(.title2)
-                                    
+
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Akshat Pathak")
                                             .font(.headline)
                                             .fontWeight(.semibold)
-                                        
-                                        Text("Co-Developer - Provided invaluable assistance in shaping features, design decisions, and development process. Your collaboration and insights have been essential to the project's success.")
+
+                                        Text("Original concept inspired by Akshat Pathak")
                                             .font(.body)
                                             .foregroundColor(.primary)
                                     }

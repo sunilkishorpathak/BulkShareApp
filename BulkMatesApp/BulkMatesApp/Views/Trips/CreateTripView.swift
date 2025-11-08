@@ -127,14 +127,12 @@ struct CreateTripView: View {
         let dateString = dateFormatter.string(from: scheduledDate)
 
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             planName = "Shopping - \(dateString)"
-        case .eventPlanning:
+        case .events:
             planName = "Event - \(dateString)"
-        case .groupTrip:
+        case .trips:
             planName = "Trip - \(dateString)"
-        case .potluckMeal:
-            planName = "Potluck - \(dateString)"
         }
     }
     
@@ -159,7 +157,10 @@ struct CreateTripView: View {
                     items: tripItems,
                     status: .planned,
                     participants: [],
-                    notes: notes.isEmpty ? nil : notes
+                    notes: notes.isEmpty ? nil : notes,
+                    creatorId: currentUser.id,
+                    adminIds: [currentUser.id],
+                    viewerIds: []
                 )
 
                 // Save to Firestore
@@ -167,7 +168,7 @@ struct CreateTripView: View {
 
                 DispatchQueue.main.async {
                     self.isLoading = false
-                    let tripTypeText = self.tripType == .bulkShopping ? self.selectedStore.displayName : self.tripType.displayName
+                    let tripTypeText = self.tripType == .shopping ? self.selectedStore.displayName : self.tripType.displayName
                     self.showAlert(
                         title: "Plan Created!",
                         message: "Your \(tripTypeText) plan with \(self.tripItems.count) items has been posted to \(self.group.name)."
@@ -232,27 +233,23 @@ struct TripHeaderCard: View {
 
     var headerText: String {
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             return "Shopping for"
-        case .eventPlanning:
+        case .events:
             return "Planning event for"
-        case .groupTrip:
-            return "Planning activity for"
-        case .potluckMeal:
-            return "Planning potluck with"
+        case .trips:
+            return "Planning trip for"
         }
     }
 
     var datePrompt: String {
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             return "When are you going?"
-        case .eventPlanning:
+        case .events:
             return "When is the event?"
-        case .groupTrip:
+        case .trips:
             return "When is it?"
-        case .potluckMeal:
-            return "When is the meal?"
         }
     }
 
@@ -280,8 +277,8 @@ struct TripHeaderCard: View {
                 Spacer()
             }
             
-            // Store Selection (only for bulk shopping)
-            if tripType == .bulkShopping {
+            // Store Selection (only for shopping)
+            if tripType == .shopping {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Store")
                         .font(.subheadline)
@@ -363,27 +360,23 @@ struct TripItemsSection: View {
 
     var sectionTitle: String {
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             return "Items to Share"
-        case .eventPlanning:
+        case .events:
             return "Event Items Needed"
-        case .groupTrip:
+        case .trips:
             return "Supplies Needed"
-        case .potluckMeal:
-            return "Food & Supplies Needed"
         }
     }
 
     var emptyStateMessage: String {
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             return "Add items you want to share from your bulk purchase"
-        case .eventPlanning:
-            return "Add items needed for your event"
-        case .groupTrip:
-            return "Add supplies needed"
-        case .potluckMeal:
-            return "Add food and supplies people can bring"
+        case .events:
+            return "Add items needed for your event or potluck"
+        case .trips:
+            return "Add supplies and gear needed for the trip"
         }
     }
 
@@ -605,5 +598,5 @@ struct CreateTripButton: View {
 }
 
 #Preview {
-    CreateTripView(group: Group.sampleGroups[0], tripType: .bulkShopping)
+    CreateTripView(group: Group.sampleGroups[0], tripType: .shopping)
 }

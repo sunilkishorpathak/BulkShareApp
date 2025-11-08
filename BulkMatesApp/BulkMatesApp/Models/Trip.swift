@@ -17,64 +17,91 @@ import Foundation
 import SwiftUI
 
 // MARK: - Trip Type Enum
-enum TripType: String, Codable, CaseIterable {
-    case bulkShopping = "bulk_shopping"
-    case eventPlanning = "event_planning"
-    case groupTrip = "group_trip"
-    case potluckMeal = "potluck_meal"
+enum TripType: String, CaseIterable {
+    case shopping = "shopping"
+    case events = "events"
+    case trips = "trips"
 
     var displayName: String {
         switch self {
-        case .bulkShopping: return "Bulk Shopping"
-        case .eventPlanning: return "Event Planning"
-        case .groupTrip: return "Group Trip"
-        case .potluckMeal: return "Potluck/Shared Meal"
+        case .shopping: return "Shopping"
+        case .events: return "Events"
+        case .trips: return "Trips"
         }
     }
 
     var icon: String {
         switch self {
-        case .bulkShopping: return "🛒"
-        case .eventPlanning: return "🎉"
-        case .groupTrip: return "🏕️"
-        case .potluckMeal: return "🍽️"
+        case .shopping: return "🛒"
+        case .events: return "🎉"
+        case .trips: return "🏕️"
         }
     }
 
     var description: String {
         switch self {
-        case .bulkShopping: return "Coordinate bulk purchases from wholesale stores"
-        case .eventPlanning: return "Plan birthdays, parties, and festival events"
-        case .groupTrip: return "Organize camping, picnics, and road trips"
-        case .potluckMeal: return "Coordinate potlucks and shared meal contributions"
+        case .shopping: return "Bulk purchases, groceries, Costco runs"
+        case .events: return "Parties, gatherings, potlucks, celebrations"
+        case .trips: return "Travel, camping, group outings"
         }
     }
 
     var accentColor: Color {
         switch self {
-        case .bulkShopping: return .bulkSharePrimary      // Green
-        case .eventPlanning: return .bulkShareWarning     // Yellow/Gold
-        case .groupTrip: return .bulkShareInfo            // Teal/Blue
-        case .potluckMeal: return .orange                 // Orange
+        case .shopping: return .bulkSharePrimary      // Green
+        case .events: return .bulkShareWarning        // Yellow/Gold
+        case .trips: return .bulkShareInfo            // Teal/Blue
         }
     }
 
     var emptyStateMessage: String {
         switch self {
-        case .bulkShopping: return "No bulk shopping trips found"
-        case .eventPlanning: return "No event planning trips found"
-        case .groupTrip: return "No group trips found"
-        case .potluckMeal: return "No potluck trips found"
+        case .shopping: return "No shopping plans found"
+        case .events: return "No event plans found"
+        case .trips: return "No trip plans found"
         }
     }
 
     var emptyStateSubtitle: String {
         switch self {
-        case .bulkShopping: return "Create a trip to Costco, Sam's Club, or BJ's"
-        case .eventPlanning: return "Plan a birthday party, festival, or celebration"
-        case .groupTrip: return "Organize a camping trip, picnic, or road trip"
-        case .potluckMeal: return "Coordinate a potluck or shared meal event"
+        case .shopping: return "Create a plan for Costco, Sam's Club, or groceries"
+        case .events: return "Plan a party, potluck, or celebration"
+        case .trips: return "Organize a camping trip, outing, or adventure"
         }
+    }
+}
+
+// MARK: - Backward Compatibility for TripType
+extension TripType: Codable {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+
+        // Map old values to new types for backward compatibility
+        switch rawValue {
+        case "bulk_shopping":
+            self = .shopping
+        case "event_planning":
+            self = .events
+        case "group_trip":
+            self = .trips
+        case "potluck_meal":
+            self = .events  // Merge potluck into events
+        case "shopping":
+            self = .shopping
+        case "events":
+            self = .events
+        case "trips":
+            self = .trips
+        default:
+            // Default to shopping if unknown type
+            self = .shopping
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(self.rawValue)
     }
 }
 
@@ -142,7 +169,7 @@ struct Trip: Identifiable, Codable {
          name: String = "",
          groupId: String,
          shopperId: String,
-         tripType: TripType = .bulkShopping, // Default to bulk shopping for backward compatibility
+         tripType: TripType = .shopping, // Default to shopping
          store: Store,
          scheduledDate: Date,
          items: [TripItem] = [],
@@ -456,14 +483,13 @@ enum ItemCategory: String, Codable, CaseIterable {
     /// Get relevant categories for a specific trip type
     static func categoriesFor(tripType: TripType) -> [ItemCategory] {
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             return [.grocery, .household, .personal, .electronics, .clothing, .other]
-        case .eventPlanning:
-            return [.decorations, .entertainment, .partySupplies, .grocery, .beverages, .other]
-        case .groupTrip:
+        case .events:
+            // Merged event planning and potluck categories
+            return [.decorations, .entertainment, .partySupplies, .appetizers, .mainCourse, .desserts, .beverages, .utensils, .other]
+        case .trips:
             return [.camping, .travel, .outdoor, .grocery, .beverages, .other]
-        case .potluckMeal:
-            return [.appetizers, .mainCourse, .desserts, .beverages, .utensils, .other]
         }
     }
 }
@@ -471,11 +497,12 @@ enum ItemCategory: String, Codable, CaseIterable {
 // MARK: - Sample Data
 extension Trip {
     static let sampleTrips: [Trip] = [
-        // Bulk Shopping Trip
+        // Shopping Trip
         Trip(
+            name: "Costco Run",
             groupId: "group1",
             shopperId: "user2",
-            tripType: .bulkShopping,
+            tripType: .shopping,
             store: .costco,
             scheduledDate: Calendar.current.date(byAdding: .hour, value: 2, to: Date()) ?? Date(),
             items: [
@@ -486,9 +513,10 @@ extension Trip {
             participants: ["user1", "user3"]
         ),
         Trip(
+            name: "Sam's Club Grocery Run",
             groupId: "group1",
             shopperId: "user3",
-            tripType: .bulkShopping,
+            tripType: .shopping,
             store: .samsClub,
             scheduledDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date(),
             items: [
@@ -497,11 +525,12 @@ extension Trip {
             ],
             participants: ["user1"]
         ),
-        // Potluck Event
+        // Event (Potluck)
         Trip(
+            name: "Summer BBQ Potluck",
             groupId: "group2",
             shopperId: "user1",
-            tripType: .potluckMeal,
+            tripType: .events,
             store: .other,
             scheduledDate: Calendar.current.date(byAdding: .day, value: 3, to: Date()) ?? Date(),
             items: [
@@ -510,13 +539,14 @@ extension Trip {
                 TripItem(name: "Paper Plates & Cups", quantityAvailable: 50, estimatedPrice: 0.20, category: .utensils)
             ],
             participants: ["user2", "user4", "user5"],
-            notes: "Summer BBQ Potluck - Everyone brings something!"
+            notes: "Everyone brings something!"
         ),
-        // Birthday Party
+        // Event (Birthday Party)
         Trip(
+            name: "Sarah's Birthday Party",
             groupId: "group3",
             shopperId: "user4",
-            tripType: .eventPlanning,
+            tripType: .events,
             store: .other,
             scheduledDate: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date(),
             items: [
@@ -525,7 +555,7 @@ extension Trip {
                 TripItem(name: "Party Hats", quantityAvailable: 20, estimatedPrice: 1.50, category: .partySupplies)
             ],
             participants: ["user1", "user2"],
-            notes: "Sarah's 10th Birthday Party"
+            notes: "Sarah's 10th Birthday - let's make it special!"
         )
     ]
 }

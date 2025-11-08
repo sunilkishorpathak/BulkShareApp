@@ -13,7 +13,7 @@ struct GroupDetailView: View {
     @State private var showingSettings = false
     @State private var showingTripTypeSelection = false
     @State private var showingCreateTrip = false
-    @State private var selectedTripType: TripType = .bulkShopping
+    @State private var selectedTripType: TripType = .shopping
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -105,11 +105,8 @@ struct GroupHeaderView: View {
             }
             
             // Group Stats
-            HStack(spacing: 16) {
-                GroupStatCard(title: "Active Plans", value: "2", icon: "cart.fill", color: .bulkSharePrimary)
-                GroupStatCard(title: "This Month", value: "$284", icon: "dollarsign.circle.fill", color: .bulkShareSuccess)
-                GroupStatCard(title: "Total Saved", value: "$1.2K", icon: "chart.line.uptrend.xyaxis", color: .bulkShareInfo)
-            }
+            GroupStatCard(title: "Active Plans", value: "2", icon: "cart.fill", color: .bulkSharePrimary)
+                .frame(maxWidth: 200)
         }
         .padding()
         .background(Color.white)
@@ -257,8 +254,8 @@ struct ActiveTripsSection: View {
     @State private var showingTripTypeSelection = false
     @State private var showingCreateTrip = false
     @State private var showingAllTrips = false
-    @State private var selectedTripType: TripType = .bulkShopping
-    
+    @State private var selectedTripType: TripType = .shopping
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -364,15 +361,15 @@ struct EnhancedTripCard: View {
             // Header
             HStack {
                 HStack(spacing: 8) {
-                    Text(trip.store.icon)
+                    Text(trip.tripType.icon)
                         .font(.title3)
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(trip.store.displayName)
+                        Text(trip.name)
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(.bulkShareTextDark)
-                        
+
                         Text(trip.scheduledDate, style: .relative)
                             .font(.caption)
                             .foregroundColor(.bulkShareTextMedium)
@@ -588,7 +585,17 @@ struct AllTripsView: View {
 struct GroupSettingsView: View {
     let group: Group
     @Environment(\.dismiss) private var dismiss
-    
+    @State private var showingDeleteConfirmation = false
+    @State private var showingLeaveConfirmation = false
+    @State private var isDeleting = false
+    @State private var errorMessage: String?
+    @State private var showingError = false
+
+    private var isAdmin: Bool {
+        guard let currentUser = FirebaseManager.shared.currentUser else { return false }
+        return group.adminId == currentUser.id
+    }
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -598,7 +605,7 @@ struct GroupSettingsView: View {
                         Text("Group Settings")
                             .font(.title2)
                             .fontWeight(.bold)
-                        
+
                         VStack(spacing: 12) {
                             SettingsRow(icon: "pencil", title: "Edit Group Info", action: {})
                             SettingsRow(icon: "person.badge.plus", title: "Manage Members", action: {})
@@ -609,14 +616,22 @@ struct GroupSettingsView: View {
                         .padding()
                         .background(Color.white)
                         .cornerRadius(12)
-                        
+
                         // Danger Zone
                         VStack(spacing: 12) {
                             Text("Danger Zone")
                                 .font(.headline)
                                 .foregroundColor(.red)
-                            
-                            SettingsRow(icon: "trash", title: "Leave Group", textColor: .red, action: {})
+
+                            if isAdmin {
+                                SettingsRow(icon: "trash.fill", title: "Delete Group", textColor: .red, action: {
+                                    showingDeleteConfirmation = true
+                                })
+                            } else {
+                                SettingsRow(icon: "rectangle.portrait.and.arrow.right", title: "Leave Group", textColor: .red, action: {
+                                    showingLeaveConfirmation = true
+                                })
+                            }
                         }
                         .padding()
                         .background(Color.white)
@@ -633,6 +648,78 @@ struct GroupSettingsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
                         .foregroundColor(.bulkSharePrimary)
+                }
+            }
+            .alert("Delete Group?", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    deleteGroup()
+                }
+            } message: {
+                Text("Are you sure you want to delete this group? This will remove all plans and cannot be undone.")
+            }
+            .alert("Leave Group?", isPresented: $showingLeaveConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Leave", role: .destructive) {
+                    leaveGroup()
+                }
+            } message: {
+                Text("Are you sure you want to leave '\(group.name)'? You'll need an invite to rejoin.")
+            }
+            .alert("Error", isPresented: $showingError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage ?? "An error occurred")
+            }
+            .overlay {
+                if isDeleting {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    ProgressView("Deleting group...")
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(10)
+                }
+            }
+        }
+    }
+
+    private func deleteGroup() {
+        isDeleting = true
+
+        Task {
+            do {
+                try await FirebaseManager.shared.deleteGroup(groupId: group.id)
+                DispatchQueue.main.async {
+                    isDeleting = false
+                    dismiss()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    isDeleting = false
+                    errorMessage = "Failed to delete group: \(error.localizedDescription)"
+                    showingError = true
+                }
+            }
+        }
+    }
+
+    private func leaveGroup() {
+        isDeleting = true
+
+        Task {
+            do {
+                guard let currentUser = FirebaseManager.shared.currentUser else { return }
+                try await FirebaseManager.shared.leaveGroup(groupId: group.id, userId: currentUser.id)
+                DispatchQueue.main.async {
+                    isDeleting = false
+                    dismiss()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    isDeleting = false
+                    errorMessage = "Failed to leave group: \(error.localizedDescription)"
+                    showingError = true
                 }
             }
         }

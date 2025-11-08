@@ -32,6 +32,11 @@ struct TripDetailView: View {
     @State private var itemComments: [ItemComment] = []
     @State private var showingMembersView = false
     @State private var showingActivityFeed = false
+    @State private var showingPlanMenu = false
+    @State private var showingDeleteConfirmation = false
+    @State private var showingEditPlan = false
+    @State private var groupInfo: Group?
+    @Environment(\.dismiss) private var dismiss
 
     private var totalCost: Double {
         return selectedItems.reduce(0) { total, selection in
@@ -99,7 +104,7 @@ struct TripDetailView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Trip Header
-                TripDetailHeader(trip: trip, claims: claims)
+                TripDetailHeader(trip: trip, claims: claims, groupInfo: groupInfo)
                 
                 if isOrganizerView {
                     // Trip Organizer View
@@ -197,12 +202,34 @@ struct TripDetailView: View {
                         .foregroundColor(.bulkSharePrimary)
                     }
 
-                    ShareLink(item: "Check out this bulk sharing plan!") {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(.bulkSharePrimary)
+                    // Menu button (only for creator/admin)
+                    if canEditList {
+                        Button(action: {
+                            showingPlanMenu = true
+                        }) {
+                            Image(systemName: "ellipsis.circle")
+                                .foregroundColor(.bulkSharePrimary)
+                        }
                     }
                 }
             }
+        }
+        .confirmationDialog("Plan Options", isPresented: $showingPlanMenu, titleVisibility: .visible) {
+            Button("Edit Plan Details") {
+                showingEditPlan = true
+            }
+            Button("Delete Plan", role: .destructive) {
+                showingDeleteConfirmation = true
+            }
+            Button("Cancel", role: .cancel) { }
+        }
+        .alert("Delete Plan?", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deletePlan()
+            }
+        } message: {
+            Text("Are you sure you want to delete this plan? This cannot be undone.")
         }
         .sheet(isPresented: $showingMembersView) {
             TripMembersView(trip: trip)
@@ -229,7 +256,15 @@ struct TripDetailView: View {
         .onAppear {
             Task {
                 await loadTripData()
+                await loadGroupInfo()
                 refreshTripData()
+            }
+        }
+        .sheet(isPresented: $showingEditPlan) {
+            if let group = groupInfo {
+                NavigationView {
+                    EditPlanDetailsView(trip: $trip, group: group)
+                }
             }
         }
         .sheet(isPresented: $showingAddItemRequest) {
@@ -567,6 +602,36 @@ struct TripDetailView: View {
         }
     }
     
+    private func deletePlan() {
+        isLoading = true
+
+        Task {
+            do {
+                try await FirebaseManager.shared.deleteTrip(tripId: trip.id)
+                DispatchQueue.main.async {
+                    isLoading = false
+                    dismiss()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    isLoading = false
+                    print("Error deleting plan: \(error)")
+                }
+            }
+        }
+    }
+
+    private func loadGroupInfo() async {
+        do {
+            let group = try await FirebaseManager.shared.getGroup(groupId: trip.groupId)
+            DispatchQueue.main.async {
+                self.groupInfo = group
+            }
+        } catch {
+            print("Error loading group info: \(error)")
+        }
+    }
+
     private func loadTripData() async {
         do {
             let tripClaims = try await FirebaseManager.shared.getTripClaims(tripId: trip.id)
@@ -606,8 +671,10 @@ struct TripDetailView: View {
 struct TripDetailHeader: View {
     let trip: Trip
     let claims: [ItemClaim]
+    let groupInfo: Group?
     @State private var shopperName: String = "Loading..."
     @State private var isLoadingShopper = true
+    @State private var navigateToGroup = false
 
     private var completionStats: (completed: Int, total: Int) {
         let acceptedClaims = claims.filter { $0.status == .accepted }
@@ -623,10 +690,33 @@ struct TripDetailHeader: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Store and Date
+            // Group Context (if available)
+            if let group = groupInfo {
+                NavigationLink(destination: GroupDetailView(group: group)) {
+                    HStack(spacing: 6) {
+                        Text(group.icon)
+                            .font(.caption)
+                        Text(group.name)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.bulkSharePrimary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundColor(.bulkShareTextLight)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.bulkSharePrimary.opacity(0.1))
+                    .cornerRadius(8)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            // Plan Name and Date
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(trip.store.icon) \(trip.store.displayName)")
+                    Text(trip.name)
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.bulkShareTextDark)
@@ -1903,6 +1993,151 @@ struct PendingItemRequestCard: View {
             } catch {
                 DispatchQueue.main.async {
                     self.requesterName = "Unknown User"
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Edit Plan Details View
+struct EditPlanDetailsView: View {
+    @Binding var trip: Trip
+    let group: Group
+    @Environment(\.dismiss) private var dismiss
+    @State private var planName: String = ""
+    @State private var selectedTripType: TripType = .shopping
+    @State private var scheduledDate: Date = Date()
+    @State private var notes: String = ""
+    @State private var isSaving = false
+    @State private var showingError = false
+    @State private var errorMessage = ""
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                Text("Edit Plan Details")
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    // Plan Name
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Plan Name")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        TextField("Enter plan name", text: $planName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                    }
+
+                    // Plan Type
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Plan Type")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+
+                        Picker("Plan Type", selection: $selectedTripType) {
+                            ForEach(TripType.allCases, id: \.self) { type in
+                                HStack {
+                                    Text(type.icon)
+                                    Text(type.displayName)
+                                }
+                                .tag(type)
+                            }
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                    }
+
+                    // Date & Time
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Date & Time")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        DatePicker("", selection: $scheduledDate, in: Date()...)
+                            .datePickerStyle(CompactDatePickerStyle())
+                    }
+
+                    // Notes
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Notes (Optional)")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        TextEditor(text: $notes)
+                            .frame(height: 100)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                            )
+                    }
+
+                    // Save Button
+                    Button(action: savePlan) {
+                        if isSaving {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Text("Save Changes")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Color.bulkSharePrimary)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .disabled(isSaving || planName.isEmpty)
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(16)
+            }
+            .padding()
+        }
+        .background(Color.bulkShareBackground.ignoresSafeArea())
+        .navigationTitle("Edit Plan")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") { dismiss() }
+                    .foregroundColor(.bulkSharePrimary)
+            }
+        }
+        .alert("Error", isPresented: $showingError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
+        .onAppear {
+            planName = trip.name
+            selectedTripType = trip.tripType
+            scheduledDate = trip.scheduledDate
+            notes = trip.notes ?? ""
+        }
+    }
+
+    private func savePlan() {
+        isSaving = true
+
+        Task {
+            do {
+                // Update trip locally
+                trip.name = planName
+                trip.tripType = selectedTripType
+                trip.scheduledDate = scheduledDate
+                trip.notes = notes.isEmpty ? nil : notes
+
+                // TODO: Add updateTrip method to FirebaseManager
+                // For now, just dismiss
+                // try await FirebaseManager.shared.updateTrip(trip)
+
+                DispatchQueue.main.async {
+                    isSaving = false
+                    dismiss()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    isSaving = false
+                    errorMessage = "Failed to save changes: \(error.localizedDescription)"
+                    showingError = true
                 }
             }
         }

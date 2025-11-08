@@ -41,44 +41,40 @@ struct AddTripItemView: View {
 
     var headerTitle: String {
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             return "Add Item to Share"
-        case .eventPlanning:
+        case .events:
             return "Add Event Item"
-        case .groupTrip:
+        case .trips:
             return "Add Supply"
-        case .potluckMeal:
-            return "Add Food/Supply"
         }
     }
 
     var headerSubtitle: String {
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             return "What item do you want to share with your group?"
-        case .eventPlanning:
-            return "What do you need for the event?"
-        case .groupTrip:
-            return "What supplies are needed?"
-        case .potluckMeal:
-            return "What food or supplies can people bring?"
+        case .events:
+            return "What do you need for the event or potluck?"
+        case .trips:
+            return "What supplies are needed for the trip?"
         }
     }
 
     var quantityLabel: String {
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             return "Quantity Available (0-20)"
-        case .eventPlanning, .groupTrip, .potluckMeal:
+        case .events, .trips:
             return "Quantity Needed (0-100)"
         }
     }
 
     var maxQuantity: Int {
         switch tripType {
-        case .bulkShopping:
+        case .shopping:
             return 20
-        case .eventPlanning, .groupTrip, .potluckMeal:
+        case .events, .trips:
             return 100
         }
     }
@@ -499,7 +495,7 @@ struct FullImageViewer: View {
 }
 
 #Preview {
-    AddTripItemView(tripType: .bulkShopping) { item in
+    AddTripItemView(tripType: .shopping) { item in
         print("Added item: \(item.name)")
     }
 }

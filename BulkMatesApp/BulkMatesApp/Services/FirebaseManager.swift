@@ -456,14 +456,46 @@ class FirebaseManager: ObservableObject {
         print("✅ User \(userId) successfully joined group \(groupId)")
     }
 
+    func leaveGroup(groupId: String, userId: String) async throws {
+        let groupRef = firestore.collection("groups").document(groupId)
+
+        // Remove user from members array
+        try await groupRef.updateData([
+            "members": FieldValue.arrayRemove([userId])
+        ])
+
+        print("✅ User \(userId) successfully left group \(groupId)")
+    }
+
+    func deleteGroup(groupId: String) async throws {
+        // Step 1: Delete all trips associated with this group
+        let tripsSnapshot = try await firestore.collection("trips")
+            .whereField("groupId", isEqualTo: groupId)
+            .getDocuments()
+
+        // Delete all trips in batch
+        let batch = firestore.batch()
+        for document in tripsSnapshot.documents {
+            batch.deleteDocument(document.reference)
+        }
+        try await batch.commit()
+
+        // Step 2: Delete the group document
+        try await firestore.collection("groups").document(groupId).delete()
+
+        print("✅ Successfully deleted group \(groupId) and \(tripsSnapshot.documents.count) associated plans")
+    }
+
     // MARK: - Trip Management
 
     
     func createTrip(_ trip: Trip) async throws -> String {
         let tripData: [String: Any] = [
             "id": trip.id,
+            "name": trip.name,
             "groupId": trip.groupId,
             "shopperId": trip.shopperId,
+            "tripType": trip.tripType.rawValue,
             "store": trip.store.rawValue,
             "scheduledDate": trip.scheduledDate,
             "items": trip.items.map { item in
@@ -479,7 +511,10 @@ class FirebaseManager: ObservableObject {
             "status": trip.status.rawValue,
             "createdAt": trip.createdAt,
             "participants": trip.participants,
-            "notes": trip.notes ?? ""
+            "notes": trip.notes ?? "",
+            "creatorId": trip.creatorId,
+            "adminIds": trip.adminIds,
+            "viewerIds": trip.viewerIds
         ]
         
         let docRef = try await firestore.collection("trips").addDocument(data: tripData)
@@ -499,11 +534,11 @@ class FirebaseManager: ObservableObject {
     
     func getTrip(tripId: String) async throws -> Trip {
         let document = try await firestore.collection("trips").document(tripId).getDocument()
-        
+
         guard let data = document.data() else {
             throw FirestoreError.documentNotFound
         }
-        
+
         let items = (data["items"] as? [[String: Any]] ?? []).compactMap { itemData in
             TripItem(
                 id: itemData["id"] as? String ?? UUID().uuidString,
@@ -514,18 +549,29 @@ class FirebaseManager: ObservableObject {
                 notes: itemData["notes"] as? String
             )
         }
-        
+
+        // Parse tripType with backward compatibility
+        let tripTypeRawValue = data["tripType"] as? String ?? "shopping"
+        let tripType = TripType(rawValue: tripTypeRawValue) ?? .shopping
+
         return Trip(
             id: document.documentID,
+            name: data["name"] as? String ?? "",
             groupId: data["groupId"] as? String ?? "",
             shopperId: data["shopperId"] as? String ?? "",
+            tripType: tripType,
             store: Store(rawValue: data["store"] as? String ?? "costco") ?? .costco,
             scheduledDate: (data["scheduledDate"] as? Timestamp)?.dateValue() ?? Date(),
             items: items,
             status: TripStatus(rawValue: data["status"] as? String ?? "planned") ?? .planned,
             createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
             participants: data["participants"] as? [String] ?? [],
-            notes: data["notes"] as? String
+            notes: data["notes"] as? String,
+            activityCount: data["activityCount"] as? Int ?? 0,
+            lastActivityTimestamp: (data["lastActivityTimestamp"] as? Timestamp)?.dateValue(),
+            creatorId: data["creatorId"] as? String ?? "",
+            adminIds: data["adminIds"] as? [String] ?? [],
+            viewerIds: data["viewerIds"] as? [String] ?? []
         )
     }
     
@@ -572,7 +618,7 @@ class FirebaseManager: ObservableObject {
     
     private func parseTrip(from document: QueryDocumentSnapshot) -> Trip? {
         let data = document.data()
-        
+
         let items = (data["items"] as? [[String: Any]] ?? []).compactMap { itemData in
             TripItem(
                 id: itemData["id"] as? String ?? UUID().uuidString,
@@ -583,18 +629,29 @@ class FirebaseManager: ObservableObject {
                 notes: itemData["notes"] as? String
             )
         }
-        
+
+        // Parse tripType with backward compatibility
+        let tripTypeRawValue = data["tripType"] as? String ?? "shopping"
+        let tripType = TripType(rawValue: tripTypeRawValue) ?? .shopping
+
         return Trip(
             id: document.documentID,
+            name: data["name"] as? String ?? "",
             groupId: data["groupId"] as? String ?? "",
             shopperId: data["shopperId"] as? String ?? "",
+            tripType: tripType,
             store: Store(rawValue: data["store"] as? String ?? "costco") ?? .costco,
             scheduledDate: (data["scheduledDate"] as? Timestamp)?.dateValue() ?? Date(),
             items: items,
             status: TripStatus(rawValue: data["status"] as? String ?? "planned") ?? .planned,
             createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
             participants: data["participants"] as? [String] ?? [],
-            notes: data["notes"] as? String
+            notes: data["notes"] as? String,
+            activityCount: data["activityCount"] as? Int ?? 0,
+            lastActivityTimestamp: (data["lastActivityTimestamp"] as? Timestamp)?.dateValue(),
+            creatorId: data["creatorId"] as? String ?? "",
+            adminIds: data["adminIds"] as? [String] ?? [],
+            viewerIds: data["viewerIds"] as? [String] ?? []
         )
     }
     
@@ -1027,13 +1084,19 @@ class FirebaseManager: ObservableObject {
         try await firestore.collection("trips").document(tripId).updateData([
             "status": status.rawValue
         ])
-        
+
         // If marking as completed, create delivery records
         if status == .completed {
             try await autoCreateDeliveryRecordsForCompletedTrip(tripId: tripId)
         }
     }
-    
+
+    func deleteTrip(tripId: String) async throws {
+        // Delete trip document
+        try await firestore.collection("trips").document(tripId).delete()
+        print("✅ Successfully deleted plan \(tripId)")
+    }
+
     // MARK: - Phone Verification Methods
     
     struct PhoneVerificationResult {

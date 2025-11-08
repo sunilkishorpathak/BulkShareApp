@@ -72,22 +72,37 @@ struct EditAddressView: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Country")
-                            .font(.caption)
-                            .foregroundColor(.bulkShareTextMedium)
+                    NavigationLink(destination: CountryPickerView(selectedCountry: $selectedCountry)) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "globe")
+                                .foregroundColor(.bulkSharePrimary)
+                                .frame(width: 24)
 
-                        Picker("Country", selection: $selectedCountry) {
-                            ForEach(countries, id: \.code) { country in
-                                HStack {
-                                    Text(country.flag)
-                                    Text(country.name)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Country")
+                                    .font(.body)
+                                    .foregroundColor(.bulkShareTextDark)
+
+                                if let country = getCountry(byCode: selectedCountry) {
+                                    HStack(spacing: 6) {
+                                        Text(country.flag)
+                                        Text(country.name)
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.bulkShareTextMedium)
+                                } else {
+                                    HStack(spacing: 6) {
+                                        Text("🇺🇸")
+                                        Text("United States")
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.bulkShareTextMedium)
                                 }
-                                .tag(country.code)
                             }
+
+                            Spacer()
                         }
-                        .pickerStyle(MenuPickerStyle())
-                        .tint(.bulkSharePrimary)
+                        .padding(.vertical, 4)
                     }
                 }
 
@@ -219,6 +234,56 @@ struct EditAddressView: View {
                 dismiss()
             }
         }
+    }
+}
+
+// MARK: - Country Picker View
+struct CountryPickerView: View {
+    @Environment(\.dismiss) var dismiss
+    @Binding var selectedCountry: String
+    @State private var searchText = ""
+
+    private var filteredCountries: [Country] {
+        if searchText.isEmpty {
+            return countries
+        } else {
+            return countries.filter { country in
+                country.name.localizedCaseInsensitiveContains(searchText) ||
+                country.code.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
+
+    var body: some View {
+        List {
+            ForEach(filteredCountries, id: \.code) { country in
+                Button(action: {
+                    selectedCountry = country.code
+                    dismiss()
+                }) {
+                    HStack(spacing: 12) {
+                        Text(country.flag)
+                            .font(.title3)
+
+                        Text(country.name)
+                            .font(.body)
+                            .foregroundColor(.bulkShareTextDark)
+
+                        Spacer()
+
+                        if country.code == selectedCountry {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.bulkSharePrimary)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .navigationTitle("Select Country")
+        .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search countries")
     }
 }
 

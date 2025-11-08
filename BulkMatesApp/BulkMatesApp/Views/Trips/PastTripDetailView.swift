@@ -174,14 +174,14 @@ struct PastTripHeader: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            // Store and Date
+            // Plan Name and Date
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(trip.store.icon) \(trip.store.displayName)")
+                    Text(trip.name)
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.bulkShareTextDark)
-                    
+
                     Text(trip.scheduledDate, style: .date)
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)

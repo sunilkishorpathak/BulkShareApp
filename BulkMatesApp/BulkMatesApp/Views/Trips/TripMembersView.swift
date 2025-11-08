@@ -451,7 +451,7 @@ struct RoleToggleButton: View {
         trip: Trip(
             groupId: "group1",
             shopperId: "user1",
-            tripType: .bulkShopping,
+            tripType: .shopping,
             store: .costco,
             scheduledDate: Date(),
             creatorId: "user1",

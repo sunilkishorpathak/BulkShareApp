@@ -19,7 +19,6 @@ struct UserProfileView: View {
     @State private var showingSuccess = false
     @State private var successMessage = ""
     @State private var isDeleting = false
-    @State private var showingEmailDebug = false
     @State private var showingPrivacyPolicy = false
     @State private var showingTermsOfService = false
     @State private var showingAcknowledgments = false
@@ -218,13 +217,6 @@ struct UserProfileView: View {
                 value: "",
                 action: { showingAcknowledgments = true }
             )
-
-            ProfileSettingsRow(
-                icon: "envelope.badge",
-                title: "Email Debug (Dev)",
-                value: "",
-                action: { showingEmailDebug = true }
-            )
         }
     }
 
@@ -293,9 +285,6 @@ struct UserProfileView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(successMessage)
-            }
-            .sheet(isPresented: $showingEmailDebug) {
-                EmailDebugView()
             }
             .sheet(isPresented: $showingPrivacyPolicy) {
                 PrivacyPolicyView()

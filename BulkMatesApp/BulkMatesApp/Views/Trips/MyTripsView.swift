@@ -20,7 +20,6 @@ struct MyTripsView: View {
     @State private var selectedTripType: TripTypeFilter = .all
     @State private var upcomingTrips: [Trip] = []
     @State private var pastTrips: [Trip] = []
-    @State private var hostingTrips: [Trip] = []
     @State private var isLoadingTrips = false
     @State private var showingTripFlow = false
     @State private var tripFlowState: TripFlowState = .groupSelection
@@ -28,28 +27,25 @@ struct MyTripsView: View {
 
     enum TripTypeFilter: String, CaseIterable {
         case all = "All Plans"
-        case bulkShopping = "Bulk Shopping"
-        case eventPlanning = "Events"
-        case groupTrip = "Group Trips"
-        case potluckMeal = "Potlucks"
+        case shopping = "Shopping"
+        case events = "Events"
+        case trips = "Trips"
 
         var tripType: TripType? {
             switch self {
             case .all: return nil
-            case .bulkShopping: return .bulkShopping
-            case .eventPlanning: return .eventPlanning
-            case .groupTrip: return .groupTrip
-            case .potluckMeal: return .potluckMeal
+            case .shopping: return .shopping
+            case .events: return .events
+            case .trips: return .trips
             }
         }
 
         var icon: String {
             switch self {
             case .all: return "square.grid.2x2"
-            case .bulkShopping: return "cart.fill"
-            case .eventPlanning: return "party.popper.fill"
-            case .groupTrip: return "figure.hiking"
-            case .potluckMeal: return "fork.knife"
+            case .shopping: return "cart.fill"
+            case .events: return "party.popper.fill"
+            case .trips: return "figure.hiking"
             }
         }
     }
@@ -63,7 +59,6 @@ struct MyTripsView: View {
     enum TripTab: String, CaseIterable {
         case upcoming = "Upcoming"
         case past = "Past"
-        case hosting = "Hosting"
     }
 
     // Filtered trips based on selected type
@@ -75,11 +70,6 @@ struct MyTripsView: View {
     var filteredPastTrips: [Trip] {
         guard let tripType = selectedTripType.tripType else { return pastTrips }
         return pastTrips.filter { $0.tripType == tripType }
-    }
-
-    var filteredHostingTrips: [Trip] {
-        guard let tripType = selectedTripType.tripType else { return hostingTrips }
-        return hostingTrips.filter { $0.tripType == tripType }
     }
 
     var body: some View {
@@ -101,10 +91,6 @@ struct MyTripsView: View {
                         // Past Trips
                         PastTripsView(trips: filteredPastTrips, selectedFilter: selectedTripType)
                             .tag(TripTab.past)
-
-                        // Hosting Trips
-                        HostingTripsView(trips: filteredHostingTrips, selectedFilter: selectedTripType)
-                            .tag(TripTab.hosting)
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 }
@@ -163,20 +149,15 @@ struct MyTripsView: View {
                 DispatchQueue.main.async {
                     // Filter trips by category
                     let now = Date()
-                    let currentUserId = FirebaseManager.shared.currentUser?.id ?? ""
-                    
+
                     self.upcomingTrips = trips.filter { trip in
                         trip.scheduledDate > now && trip.status == .planned
                     }
-                    
+
                     self.pastTrips = trips.filter { trip in
                         trip.scheduledDate <= now || trip.status == .completed
                     }
-                    
-                    self.hostingTrips = trips.filter { trip in
-                        trip.shopperId == currentUserId && trip.status == .planned
-                    }
-                    
+
                     self.isLoadingTrips = false
                 }
                 
@@ -340,62 +321,53 @@ struct PastTripsView: View {
     }
 }
 
-struct HostingTripsView: View {
-    let trips: [Trip]
-    let selectedFilter: MyTripsView.TripTypeFilter
-
-    var emptyState: (String, String) {
-        if let tripType = selectedFilter.tripType {
-            return ("No \(tripType.displayName.lowercased()) plans", tripType.emptyStateSubtitle)
-        }
-        return ("No Hosting Plans", "Create a plan to start hosting for your group")
-    }
-
-    var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                if trips.isEmpty {
-                    EmptyTripsView(
-                        icon: "person.badge.plus",
-                        title: emptyState.0,
-                        subtitle: emptyState.1
-                    )
-                } else {
-                    ForEach(trips) { trip in
-                        HostingTripCard(trip: trip)
-                    }
-                }
-            }
-            .padding()
-        }
-        .background(Color.bulkShareBackground.ignoresSafeArea())
-    }
-}
-
 struct UpcomingTripCard: View {
     let trip: Trip
+
+    private var isCreator: Bool {
+        guard let currentUserId = FirebaseManager.shared.currentUser?.id else { return false }
+        return trip.creatorId == currentUserId
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Header with Trip Type
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
-                    // Trip Type Badge
-                    HStack(spacing: 4) {
-                        Text(trip.tripType.icon)
-                            .font(.caption)
-                        Text(trip.tripType.displayName)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(trip.tripType.accentColor)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(trip.tripType.accentColor.opacity(0.1))
-                    .cornerRadius(8)
+                    // Trip Type Badge + Creator Indicator
+                    HStack(spacing: 6) {
+                        HStack(spacing: 4) {
+                            Text(trip.tripType.icon)
+                                .font(.caption)
+                            Text(trip.tripType.displayName)
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(trip.tripType.accentColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(trip.tripType.accentColor.opacity(0.1))
+                        .cornerRadius(8)
 
-                    // Store/Location
-                    Text("\(trip.store.icon) \(trip.store.displayName)")
+                        // Subtle creator indicator
+                        if isCreator {
+                            HStack(spacing: 3) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 8))
+                                Text("You")
+                                    .font(.system(size: 10))
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.bulkShareWarning)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.bulkShareWarning.opacity(0.1))
+                            .cornerRadius(6)
+                        }
+                    }
+
+                    // Plan Name
+                    Text(trip.name)
                         .font(.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.bulkShareTextDark)
@@ -444,17 +416,36 @@ struct UpcomingTripCard: View {
 
 struct PastTripCard: View {
     let trip: Trip
-    
+
+    private var isCreator: Bool {
+        guard let currentUserId = FirebaseManager.shared.currentUser?.id else { return false }
+        return trip.creatorId == currentUserId
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("\(trip.store.icon) \(trip.store.displayName)")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.bulkShareTextDark)
-                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(trip.name)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.bulkShareTextDark)
+
+                    // Subtle creator indicator
+                    if isCreator {
+                        HStack(spacing: 3) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 8))
+                            Text("Created by you")
+                                .font(.system(size: 10))
+                                .fontWeight(.medium)
+                        }
+                        .foregroundColor(.bulkShareWarning)
+                    }
+                }
+
                 Spacer()
-                
+
                 Badge(text: "Completed", color: .bulkShareSuccess)
             }
             
@@ -474,51 +465,6 @@ struct PastTripCard: View {
                 }
                 .font(.caption)
                 .foregroundColor(.bulkSharePrimary)
-            }
-        }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
-    }
-}
-
-struct HostingTripCard: View {
-    let trip: Trip
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("\(trip.store.icon) \(trip.store.displayName)")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.bulkShareTextDark)
-                
-                Spacer()
-                
-                Badge(text: "Hosting", color: .bulkShareWarning)
-            }
-            
-            Text(trip.scheduledDate, style: .relative)
-                .font(.subheadline)
-                .foregroundColor(.bulkShareTextMedium)
-            
-            HStack {
-                Text("\(trip.participantCount) participants")
-                    .font(.subheadline)
-                    .foregroundColor(.bulkShareInfo)
-                
-                Spacer()
-                
-                Button("Manage") {
-                    // Manage trip
-                }
-                .font(.subheadline)
-                .foregroundColor(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(Color.bulkSharePrimary)
-                .cornerRadius(6)
             }
         }
         .padding()

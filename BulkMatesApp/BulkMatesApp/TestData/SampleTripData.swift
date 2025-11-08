@@ -10,11 +10,12 @@ import Foundation
 extension Trip {
     // MARK: - Test Data for Different Trip Types
 
-    static let testBulkShoppingTrip = Trip(
-        id: "test-bulk-1",
+    static let testShoppingTrip = Trip(
+        id: "test-shopping-1",
+        name: "Saturday Costco Run",
         groupId: "test-group-1",
         shopperId: "test-user-1",
-        tripType: .bulkShopping,
+        tripType: .shopping,
         store: .costco,
         scheduledDate: Date().addingTimeInterval(86400), // Tomorrow
         items: [
@@ -47,11 +48,12 @@ extension Trip {
         notes: "Saturday morning Costco run"
     )
 
-    static let testEventPlanningTrip = Trip(
+    static let testEventsTrip = Trip(
         id: "test-event-1",
+        name: "Emma's Birthday Party",
         groupId: "test-group-2",
         shopperId: "test-user-2",
-        tripType: .eventPlanning,
+        tripType: .events,
         store: .other,
         scheduledDate: Date().addingTimeInterval(604800), // 1 week
         items: [
@@ -92,9 +94,10 @@ extension Trip {
 
     static let testPotluckTrip = Trip(
         id: "test-potluck-1",
+        name: "Summer BBQ Potluck",
         groupId: "test-group-3",
         shopperId: "test-user-3",
-        tripType: .potluckMeal,
+        tripType: .events,
         store: .other,
         scheduledDate: Date().addingTimeInterval(259200), // 3 days
         items: [
@@ -142,11 +145,12 @@ extension Trip {
         notes: "Summer BBQ Potluck 🍔🌭 - Everyone brings something!"
     )
 
-    static let testGroupTrip = Trip(
-        id: "test-group-trip-1",
+    static let testCampingTrip = Trip(
+        id: "test-camping-trip-1",
+        name: "Weekend Camping Trip",
         groupId: "test-group-4",
         shopperId: "test-user-4",
-        tripType: .groupTrip,
+        tripType: .trips,
         store: .other,
         scheduledDate: Date().addingTimeInterval(1209600), // 2 weeks
         items: [
@@ -199,9 +203,10 @@ extension Trip {
     // Scenario: Multiple users claiming same item
     static let partialClaimingTestTrip = Trip(
         id: "test-partial-1",
+        name: "Office Lunch Potluck",
         groupId: "test-group-5",
         shopperId: "test-user-1",
-        tripType: .potluckMeal,
+        tripType: .events,
         store: .other,
         scheduledDate: Date().addingTimeInterval(172800), // 2 days
         items: [
@@ -296,9 +301,10 @@ extension Trip {
     // Trip with fully claimed item
     static let fullyClaimedTestTrip = Trip(
         id: "test-full-1",
+        name: "Thanksgiving Potluck",
         groupId: "test-group-6",
         shopperId: "test-user-1",
-        tripType: .potluckMeal,
+        tripType: .events,
         store: .other,
         scheduledDate: Date().addingTimeInterval(86400),
         items: [
@@ -329,9 +335,10 @@ extension Trip {
     // Trip with all items completed
     static let allCompletedTestTrip = Trip(
         id: "test-completed-1",
+        name: "New Year's Party",
         groupId: "test-group-7",
         shopperId: "test-user-1",
-        tripType: .eventPlanning,
+        tripType: .events,
         store: .other,
         scheduledDate: Date().addingTimeInterval(86400),
         items: [
@@ -382,10 +389,10 @@ extension Trip {
     // MARK: - All Test Trips Array
 
     static let allTestTrips = [
-        testBulkShoppingTrip,
-        testEventPlanningTrip,
+        testShoppingTrip,
+        testEventsTrip,
         testPotluckTrip,
-        testGroupTrip,
+        testCampingTrip,
         partialClaimingTestTrip,
         fullyClaimedTestTrip,
         allCompletedTestTrip
