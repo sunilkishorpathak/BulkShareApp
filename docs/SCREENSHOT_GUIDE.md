@@ -42,58 +42,60 @@ Apple requires screenshots for different device sizes:
 **Screen:** Groups dashboard with multiple active groups
 
 **What to show:**
-- 3-4 groups with fun icons (🏡 🏫 👨‍👩‍👧)
-- "Active Plans" badge visible
+- 3-4 groups with fun icons (🏡 🎉 🏕️)
+- Mix of group types (neighbors, friends, family)
 - Clean, organized interface
 - Bottom tab bar visible
 
 **Text Overlay:**
 ```
-Shop Bulk. Share Smart.
-Coordinate bulk purchases with friends and neighbors
+Connect. Plan. Coordinate.
+Plan shopping trips, events, and group outings together
 ```
 
-**Why this works:** Immediately shows the app's purpose and clean design
+**Why this works:** Immediately shows the app's purpose and three main use cases
 
 ---
 
-### Screenshot 2: PLAN CREATION
-**Screen:** Create Shopping Plan with items added
+### Screenshot 2: THREE PLAN TYPES
+**Screen:** Plan type selection screen
 
 **What to show:**
-- Plan name: "Costco Run - This Weekend"
-- Store selection showing Costco logo
-- 3-4 items listed with photos
-- Date/time picker
-- Green "Create Plan" button
+- Three plan type options clearly visible:
+  * 🛒 Shopping (Costco runs, groceries)
+  * 🎉 Events (Parties, potlucks)
+  * 🏕️ Trips (Camping, group outings)
+- Clean card design for each type
+- Visual hierarchy
 
 **Text Overlay:**
 ```
-Plan Bulk Shopping Trips
-Add items you want to share from your purchase
+Three Ways to Plan Together
+Shopping trips, events, and group outings
 ```
 
-**Why this works:** Shows the core workflow and value
+**Why this works:** Shows the versatility of the app beyond just shopping
 
 ---
 
-### Screenshot 3: PLAN DETAILS WITH ITEMS
-**Screen:** Active plan with shareable items
+### Screenshot 3: PLAN COORDINATION
+**Screen:** Active plan with items and members
 
 **What to show:**
-- Plan header with store and date
+- Plan header (could be event, shopping, or trip)
 - 5-6 items with photos and quantities
-- "3 people joined" indicator
-- Items like: Paper towels, Rice (10lb), Pasta (24-pack)
-- ⭐ You badge showing it's user's plan
+- Member count visible (e.g., "5 members")
+- Mix of item types relevant to plan
+- ⭐ You badge if creator
+- Group badge at top
 
 **Text Overlay:**
 ```
-Share Bulk Items Easily
-See what's available and claim what you need
+Coordinate Who Brings What
+Everyone knows what's needed and who's claiming items
 ```
 
-**Why this works:** Visualizes the sharing concept
+**Why this works:** Shows the coordination and planning workflow
 
 ---
 
@@ -123,36 +125,37 @@ Get notified about new plans and updates
 **What to show:**
 - Group name and icon
 - Member count
-- Upcoming plans listed
+- Mix of upcoming plans (shopping, events, trips)
 - "Create Plan" button
 - Active, social feel
 
 **Text Overlay:**
 ```
-Build Your Shopping Community
-Create groups with friends, family, and neighbors
+Build Your Planning Community
+Create groups and plan activities together
 ```
 
-**Why this works:** Emphasizes social/community aspect
+**Why this works:** Emphasizes community and collaboration beyond shopping
 
 ---
 
-### Screenshot 6 (Optional): SAVINGS/SUCCESS
-**Screen:** Success message after creating plan
+### Screenshot 6 (Optional): MY PLANS VIEW
+**Screen:** My Plans screen with upcoming and past tabs
 
 **What to show:**
-- Confirmation: "Plan Created!"
-- Message showing items posted to group
-- Or: Empty cart with "Your group saved $X by sharing"
-- Positive, achievement feel
+- Mix of upcoming plans (shopping, events, trips)
+- ⭐ You badges on created plans
+- Plan type badges (🛒 🎉 🏕️)
+- Clean list with dates
+- Two tabs: Upcoming and Past
 
 **Text Overlay:**
 ```
-Save Money Together
-Bulk prices without the bulk waste
+Stay Organized
+Track all your group plans in one place
 ```
 
-**Why this works:** Reinforces value proposition
+**Why this works:** Shows organization and ease of tracking multiple plans
 
 ---
 
@@ -260,21 +263,41 @@ Before uploading to App Store Connect:
 ### Group Names (Use fun, relatable examples)
 - "Smith Family" 🏡
 - "Oakwood Neighbors" 🌳
-- "College Roommates" 🎓
+- "Weekend Warriors" 🏕️
 - "Parent Group - Lincoln Elementary" 👨‍👩‍👧
 
-### Plan Names
+### Plan Names (Mix of all three types)
+**Shopping:**
 - "Costco Run - This Weekend"
 - "Sam's Club Grocery Haul"
-- "Party Supplies for Emma's Birthday"
-- "Camping Trip Supplies"
 
-### Item Names (Real bulk items)
+**Events:**
+- "Emma's 10th Birthday Party"
+- "Summer BBQ Potluck"
+- "Holiday Cookie Exchange"
+
+**Trips:**
+- "Yosemite Camping Trip"
+- "Beach Day Supplies"
+- "Ski Weekend Essentials"
+
+### Item Names (Vary by plan type)
+**Shopping Items:**
 - "Bounty Paper Towels (12-pack)"
 - "Kirkland Rice (25 lbs)"
-- "Tide Pods (152 count)"
-- "Pampers Diapers (Size 4, 186 count)"
 - "Nature Valley Granola Bars (48 count)"
+
+**Event Items:**
+- "Birthday Cake"
+- "Balloons & Decorations"
+- "Burger Patties (30 count)"
+- "Paper Plates & Cups"
+
+**Trip Items:**
+- "Camping Tent (4-person)"
+- "Firewood Bundle"
+- "Cooler with Ice"
+- "Trail Mix & Snacks"
 
 ### User Names (Generic, diverse)
 - "Sarah Johnson"
@@ -361,14 +384,14 @@ Before uploading to App Store Connect:
 
 ### Minimum Viable Screenshots (3 required):
 
-1. **Groups Dashboard** - Shows app overview
-2. **Create Plan Flow** - Shows how it works
-3. **Plan Details** - Shows the sharing concept
+1. **Groups Dashboard** - Shows app overview and community aspect
+2. **Plan Type Selection** - Shows shopping, events, AND trips
+3. **Plan Details** - Shows coordination and item claiming
 
 **Simple text overlays:**
-- "Coordinate Bulk Shopping"
-- "Plan Together. Save Together."
-- "Share Bulk Purchases Easily"
+- "Connect. Plan. Coordinate."
+- "Plan Together. Do Together."
+- "Coordinate Who Brings What"
 
 **Time estimate:** 2-3 hours with simulator + Canva
 
