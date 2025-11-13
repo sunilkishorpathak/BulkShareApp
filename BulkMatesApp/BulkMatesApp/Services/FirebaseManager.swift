@@ -530,7 +530,7 @@ class FirebaseManager: ObservableObject {
             "store": trip.store.rawValue,
             "scheduledDate": trip.scheduledDate,
             "items": trip.items.map { item in
-                [
+                var itemData: [String: Any] = [
                     "id": item.id,
                     "name": item.name,
                     "quantityAvailable": item.quantityAvailable,
@@ -538,6 +538,11 @@ class FirebaseManager: ObservableObject {
                     "category": item.category.rawValue,
                     "notes": item.notes ?? ""
                 ]
+                // Add imageURL if present
+                if let imageURL = item.imageURL {
+                    itemData["imageURL"] = imageURL
+                }
+                return itemData
             },
             "status": trip.status.rawValue,
             "createdAt": trip.createdAt,
@@ -577,7 +582,8 @@ class FirebaseManager: ObservableObject {
                 quantityAvailable: itemData["quantityAvailable"] as? Int ?? 1,
                 estimatedPrice: itemData["estimatedPrice"] as? Double ?? 0.0,
                 category: ItemCategory(rawValue: itemData["category"] as? String ?? "grocery") ?? .grocery,
-                notes: itemData["notes"] as? String
+                notes: itemData["notes"] as? String,
+                imageURL: itemData["imageURL"] as? String
             )
         }
 
@@ -683,7 +689,8 @@ class FirebaseManager: ObservableObject {
                 quantityAvailable: itemData["quantityAvailable"] as? Int ?? 1,
                 estimatedPrice: itemData["estimatedPrice"] as? Double ?? 0.0,
                 category: ItemCategory(rawValue: itemData["category"] as? String ?? "grocery") ?? .grocery,
-                notes: itemData["notes"] as? String
+                notes: itemData["notes"] as? String,
+                imageURL: itemData["imageURL"] as? String
             )
         }
 
