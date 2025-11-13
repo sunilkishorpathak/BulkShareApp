@@ -1250,24 +1250,45 @@ struct QuantitySelectableItemCard: View {
     let selectedQuantity: Int
     let userClaim: ItemClaim?
     let onQuantityChange: (Int) -> Void
-    
+
     var body: some View {
         VStack(spacing: 12) {
-            HStack {
+            HStack(spacing: 12) {
+                // Item Photo Thumbnail
+                if let imageURL = item.imageURL, let url = URL(string: imageURL) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 60, height: 60)
+                                .cornerRadius(8)
+                                .clipped()
+                        case .failure(_), .empty:
+                            placeholderImage
+                        @unknown default:
+                            placeholderImage
+                        }
+                    }
+                } else {
+                    placeholderImage
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.name)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.bulkShareTextDark)
                         .multilineTextAlignment(.leading)
-                    
+
                     HStack {
                         Text("\(item.category.icon) \(item.category.displayName)")
                             .font(.caption)
                             .foregroundColor(.bulkShareTextMedium)
-                        
+
                         Spacer()
-                        
+
                         if remainingQuantity > 0 {
                             Text("\(remainingQuantity) remaining")
                                 .font(.caption)
@@ -1392,6 +1413,19 @@ struct QuantitySelectableItemCard: View {
                 )
         )
         .opacity(remainingQuantity > 0 ? 1.0 : 0.6)
+    }
+
+    // Placeholder view for items without photos
+    private var placeholderImage: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 60, height: 60)
+
+            Image(systemName: "photo")
+                .font(.title2)
+                .foregroundColor(.gray)
+        }
     }
 }
 
@@ -1562,18 +1596,39 @@ struct OrganizerItemCard: View {
     
     var body: some View {
         VStack(spacing: 12) {
-            HStack {
+            HStack(spacing: 12) {
+                // Item Photo Thumbnail
+                if let imageURL = item.imageURL, let url = URL(string: imageURL) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 60, height: 60)
+                                .cornerRadius(8)
+                                .clipped()
+                        case .failure(_), .empty:
+                            placeholderImage
+                        @unknown default:
+                            placeholderImage
+                        }
+                    }
+                } else {
+                    placeholderImage
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.name)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.bulkShareTextDark)
-                    
+
                     Text("\(item.category.icon) \(item.category.displayName)")
                         .font(.caption)
                         .foregroundColor(.bulkShareTextMedium)
                 }
-                
+
                 Spacer()
             }
             
@@ -1605,6 +1660,19 @@ struct OrganizerItemCard: View {
         .padding()
         .background(Color.bulkShareBackground)
         .cornerRadius(12)
+    }
+
+    // Placeholder view for items without photos
+    private var placeholderImage: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 60, height: 60)
+
+            Image(systemName: "photo")
+                .font(.title2)
+                .foregroundColor(.gray)
+        }
     }
 }
 
