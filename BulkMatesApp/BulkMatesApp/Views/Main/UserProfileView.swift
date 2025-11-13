@@ -340,10 +340,10 @@ struct UserProfileView: View {
             } message: {
                 Text(biometricErrorMessage)
             }
-            .onChange(of: addressVisibility) { newValue in
+            .onChange(of: addressVisibility) { _, newValue in
                 updateAddressVisibility(newValue)
             }
-            .onChange(of: biometricEnabled) { newValue in
+            .onChange(of: biometricEnabled) { _, newValue in
                 if newValue {
                     enableBiometric()
                 } else {
@@ -527,9 +527,7 @@ struct UserProfileView: View {
         metadata.cacheControl = "public, max-age=31536000" // Cache for 1 year
 
         // Upload the image
-        imageRef.putData(finalImageData, metadata: metadata) { [weak self] uploadMetadata, error in
-            guard let self = self else { return }
-
+        imageRef.putData(finalImageData, metadata: metadata) { uploadMetadata, error in
             if let error = error {
                 #if DEBUG
                 print("❌ Error uploading profile image: \(error.localizedDescription)")
@@ -547,9 +545,7 @@ struct UserProfileView: View {
             #endif
 
             // Get download URL immediately after successful upload
-            imageRef.downloadURL { [weak self] url, error in
-                guard let self = self else { return }
-
+            imageRef.downloadURL { url, error in
                 if let error = error {
                     #if DEBUG
                     print("❌ Error getting download URL: \(error.localizedDescription)")
@@ -621,9 +617,7 @@ struct UserProfileView: View {
         let db = Firestore.firestore()
         db.collection("users").document(currentUserId).updateData([
             "profileImageURL": imageURL
-        ]) { [weak self] error in
-            guard let self = self else { return }
-
+        ]) { error in
             DispatchQueue.main.async {
                 self.isUploadingImage = false
 
@@ -670,9 +664,7 @@ struct UserProfileView: View {
         let db = Firestore.firestore()
         db.collection("users").document(currentUserId).updateData([
             "profileImageURL": FieldValue.delete()
-        ]) { [weak self] error in
-            guard let self = self else { return }
-
+        ]) { error in
             DispatchQueue.main.async {
                 self.isUploadingImage = false
 
