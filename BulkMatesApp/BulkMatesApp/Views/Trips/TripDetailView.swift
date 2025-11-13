@@ -1250,6 +1250,7 @@ struct QuantitySelectableItemCard: View {
     let selectedQuantity: Int
     let userClaim: ItemClaim?
     let onQuantityChange: (Int) -> Void
+    @State private var showFullImage = false
 
     var body: some View {
         VStack(spacing: 12) {
@@ -1262,14 +1263,22 @@ struct QuantitySelectableItemCard: View {
                             image
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: 60, height: 60)
+                                .frame(width: 80, height: 80)
                                 .cornerRadius(8)
                                 .clipped()
-                        case .failure(_), .empty:
+                                .onTapGesture {
+                                    showFullImage = true
+                                }
+                        case .failure(_):
                             placeholderImage
+                        case .empty:
+                            loadingPlaceholder
                         @unknown default:
                             placeholderImage
                         }
+                    }
+                    .sheet(isPresented: $showFullImage) {
+                        FullSizeImageView(imageURL: imageURL, itemName: item.name)
                     }
                 } else {
                     placeholderImage
@@ -1420,11 +1429,23 @@ struct QuantitySelectableItemCard: View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.gray.opacity(0.2))
-                .frame(width: 60, height: 60)
+                .frame(width: 80, height: 80)
 
             Image(systemName: "photo")
                 .font(.title2)
                 .foregroundColor(.gray)
+        }
+    }
+
+    // Loading placeholder while image is fetching
+    private var loadingPlaceholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.1))
+                .frame(width: 80, height: 80)
+
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
         }
     }
 }
@@ -1581,19 +1602,20 @@ struct TripItemsOrganizerSection: View {
 struct OrganizerItemCard: View {
     let item: TripItem
     let claims: [ItemClaim]
-    
+    @State private var showFullImage = false
+
     private var acceptedQuantity: Int {
         claims.filter { $0.status == .accepted }.reduce(0) { $0 + $1.quantityClaimed }
     }
-    
+
     private var pendingQuantity: Int {
         claims.filter { $0.status == .pending }.reduce(0) { $0 + $1.quantityClaimed }
     }
-    
+
     private var remainingQuantity: Int {
         item.quantityAvailable - acceptedQuantity
     }
-    
+
     var body: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
@@ -1605,14 +1627,22 @@ struct OrganizerItemCard: View {
                             image
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: 60, height: 60)
+                                .frame(width: 80, height: 80)
                                 .cornerRadius(8)
                                 .clipped()
-                        case .failure(_), .empty:
+                                .onTapGesture {
+                                    showFullImage = true
+                                }
+                        case .failure(_):
                             placeholderImage
+                        case .empty:
+                            loadingPlaceholder
                         @unknown default:
                             placeholderImage
                         }
+                    }
+                    .sheet(isPresented: $showFullImage) {
+                        FullSizeImageView(imageURL: imageURL, itemName: item.name)
                     }
                 } else {
                     placeholderImage
@@ -1667,11 +1697,23 @@ struct OrganizerItemCard: View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.gray.opacity(0.2))
-                .frame(width: 60, height: 60)
+                .frame(width: 80, height: 80)
 
             Image(systemName: "photo")
                 .font(.title2)
                 .foregroundColor(.gray)
+        }
+    }
+
+    // Loading placeholder while image is fetching
+    private var loadingPlaceholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.1))
+                .frame(width: 80, height: 80)
+
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
         }
     }
 }
@@ -2129,12 +2171,36 @@ struct EditPlanDetailsView: View {
                         Text("Notes (Optional)")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                        TextEditor(text: $notes)
-                            .frame(height: 100)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                            )
+                            .foregroundColor(.bulkShareTextDark)
+
+                        ZStack(alignment: .topLeading) {
+                            // Background and border
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                )
+
+                            // Placeholder text
+                            if notes.isEmpty {
+                                Text("Add notes about this plan...")
+                                    .foregroundColor(Color.gray.opacity(0.5))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 12)
+                                    .font(.body)
+                            }
+
+                            // Text editor
+                            TextEditor(text: $notes)
+                                .frame(height: 120)
+                                .padding(4)
+                                .background(Color.clear)
+                                .scrollContentBackground(.hidden)
+                                .foregroundColor(.bulkShareTextDark)
+                                .font(.body)
+                        }
+                        .frame(height: 120)
                     }
 
                     // Save Button
@@ -2208,6 +2274,95 @@ struct EditPlanDetailsView: View {
                     showingError = true
                 }
             }
+        }
+    }
+}
+
+// MARK: - Full-Size Image View
+
+struct FullSizeImageView: View {
+    let imageURL: String
+    let itemName: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                if let url = URL(string: imageURL) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFit()
+                                .scaleEffect(scale)
+                                .gesture(
+                                    MagnificationGesture()
+                                        .onChanged { value in
+                                            scale = lastScale * value
+                                        }
+                                        .onEnded { _ in
+                                            lastScale = scale
+                                            // Reset if zoomed out too far
+                                            if scale < 1.0 {
+                                                withAnimation {
+                                                    scale = 1.0
+                                                    lastScale = 1.0
+                                                }
+                                            }
+                                            // Limit maximum zoom
+                                            if scale > 5.0 {
+                                                withAnimation {
+                                                    scale = 5.0
+                                                    lastScale = 5.0
+                                                }
+                                            }
+                                        }
+                                )
+                                .onTapGesture(count: 2) {
+                                    // Double tap to reset zoom
+                                    withAnimation {
+                                        scale = 1.0
+                                        lastScale = 1.0
+                                    }
+                                }
+                        case .failure(_):
+                            VStack(spacing: 16) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.white)
+                                Text("Failed to load image")
+                                    .foregroundColor(.white)
+                            }
+                        case .empty:
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                }
+            }
+            .navigationTitle(itemName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.black.opacity(0.8), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
 }
