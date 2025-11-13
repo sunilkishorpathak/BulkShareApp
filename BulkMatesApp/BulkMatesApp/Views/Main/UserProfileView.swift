@@ -529,12 +529,26 @@ struct UserProfileView: View {
         // Upload the image
         imageRef.putData(finalImageData, metadata: metadata) { uploadMetadata, error in
             if let error = error {
+                let nsError = error as NSError
                 #if DEBUG
                 print("❌ Error uploading profile image: \(error.localizedDescription)")
+                print("   Error code: \(nsError.code)")
+                print("   Error domain: \(nsError.domain)")
+                if nsError.domain == "FIRStorageErrorDomain" {
+                    if nsError.code == -13021 {
+                        print("   ⚠️ PERMISSION DENIED: Check Firebase Storage rules!")
+                    }
+                }
                 #endif
                 DispatchQueue.main.async {
                     self.isUploadingImage = false
-                    self.errorMessage = "Failed to upload profile picture. Please check your connection and try again."
+
+                    // Check if it's a permission error
+                    if nsError.domain == "FIRStorageErrorDomain" && nsError.code == -13021 {
+                        self.errorMessage = "Permission denied. Please make sure Firebase Storage rules are set up correctly."
+                    } else {
+                        self.errorMessage = "Failed to upload profile picture. Please check your connection and try again."
+                    }
                     self.showingError = true
                 }
                 return
@@ -547,12 +561,34 @@ struct UserProfileView: View {
             // Get download URL immediately after successful upload
             imageRef.downloadURL { url, error in
                 if let error = error {
+                    let nsError = error as NSError
                     #if DEBUG
                     print("❌ Error getting download URL: \(error.localizedDescription)")
+                    print("   Error code: \(nsError.code)")
+                    print("   Error domain: \(nsError.domain)")
+                    if nsError.domain == "FIRStorageErrorDomain" {
+                        if nsError.code == -13010 {
+                            print("   ⚠️ OBJECT NOT FOUND: This usually means Firebase Storage rules denied the upload!")
+                        } else if nsError.code == -13021 {
+                            print("   ⚠️ PERMISSION DENIED: Check Firebase Storage rules!")
+                        }
+                    }
                     #endif
                     DispatchQueue.main.async {
                         self.isUploadingImage = false
-                        self.errorMessage = "Upload completed but failed to get image URL. Please try again."
+
+                        // Provide helpful error message
+                        if nsError.domain == "FIRStorageErrorDomain" {
+                            if nsError.code == -13010 {
+                                self.errorMessage = "Upload failed: Firebase Storage rules may not be configured. Check console for details."
+                            } else if nsError.code == -13021 {
+                                self.errorMessage = "Permission denied: Please update Firebase Storage rules."
+                            } else {
+                                self.errorMessage = "Failed to get image URL (Error \(nsError.code)). Please try again."
+                            }
+                        } else {
+                            self.errorMessage = "Upload completed but failed to get image URL. Please try again."
+                        }
                         self.showingError = true
                     }
                     return
