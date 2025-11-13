@@ -492,82 +492,152 @@ struct UserProfileView: View {
 
         isUploadingImage = true
 
-        // Compress image (profile pictures should be smaller)
-        guard let imageData = image.jpegData(compressionQuality: 0.5) else {
-            isUploadingImage = false
-            errorMessage = "Failed to process image"
-            showingError = true
+        // Resize image to max 1024px to reduce file size
+        let resizedImage = resizeImage(image: image, maxDimension: 1024)
+
+        // Compress image with quality adjustment for target size
+        var compressionQuality: CGFloat = 0.7
+        var imageData = resizedImage.jpegData(compressionQuality: compressionQuality)
+
+        // If still over 2MB, compress more aggressively
+        while let data = imageData, data.count > 2_000_000 && compressionQuality > 0.1 {
+            compressionQuality -= 0.1
+            imageData = resizedImage.jpegData(compressionQuality: compressionQuality)
+        }
+
+        guard let finalImageData = imageData else {
+            DispatchQueue.main.async {
+                self.isUploadingImage = false
+                self.errorMessage = "Failed to process image. Please try a different photo."
+                self.showingError = true
+            }
             return
         }
 
+        #if DEBUG
+        print("📸 Uploading profile image: \(finalImageData.count / 1024)KB with quality: \(compressionQuality)")
+        #endif
+
         let storageRef = Storage.storage().reference()
-        let imageName = "profile_\(currentUserId).jpg"
+        let imageName = "\(currentUserId).jpg"
         let imageRef = storageRef.child("profile_images/\(imageName)")
 
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
+        metadata.cacheControl = "public, max-age=31536000" // Cache for 1 year
 
-        imageRef.putData(imageData, metadata: metadata) { metadata, error in
+        // Upload the image
+        imageRef.putData(finalImageData, metadata: metadata) { [weak self] uploadMetadata, error in
+            guard let self = self else { return }
+
             if let error = error {
-                print("Error uploading profile image: \(error)")
+                #if DEBUG
+                print("❌ Error uploading profile image: \(error.localizedDescription)")
+                #endif
                 DispatchQueue.main.async {
                     self.isUploadingImage = false
-                    self.errorMessage = "Failed to upload profile picture: \(error.localizedDescription)"
+                    self.errorMessage = "Failed to upload profile picture. Please check your connection and try again."
                     self.showingError = true
                 }
                 return
             }
 
-            // Wait a moment for Firebase Storage to make the file available
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                imageRef.downloadURL { url, error in
-                    if let error = error {
-                        print("Error getting download URL: \(error)")
-                        // Retry once after a delay
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                            imageRef.downloadURL { retryUrl, retryError in
-                                if let retryError = retryError {
-                                    print("Error on retry: \(retryError)")
-                                    DispatchQueue.main.async {
-                                        self.isUploadingImage = false
-                                        self.errorMessage = "Failed to get image URL. Please try again."
-                                        self.showingError = true
-                                    }
-                                    return
-                                }
+            #if DEBUG
+            print("✅ Profile image uploaded successfully")
+            #endif
 
-                                if let urlString = retryUrl?.absoluteString {
-                                    self.updateUserProfileImage(urlString)
-                                }
-                            }
-                        }
-                        return
-                    }
+            // Get download URL immediately after successful upload
+            imageRef.downloadURL { [weak self] url, error in
+                guard let self = self else { return }
 
-                    if let urlString = url?.absoluteString {
-                        self.updateUserProfileImage(urlString)
+                if let error = error {
+                    #if DEBUG
+                    print("❌ Error getting download URL: \(error.localizedDescription)")
+                    #endif
+                    DispatchQueue.main.async {
+                        self.isUploadingImage = false
+                        self.errorMessage = "Upload completed but failed to get image URL. Please try again."
+                        self.showingError = true
                     }
+                    return
                 }
+
+                guard let downloadURL = url else {
+                    DispatchQueue.main.async {
+                        self.isUploadingImage = false
+                        self.errorMessage = "Failed to get image URL. Please try again."
+                        self.showingError = true
+                    }
+                    return
+                }
+
+                #if DEBUG
+                print("✅ Got download URL: \(downloadURL.absoluteString)")
+                #endif
+
+                // Update Firestore with the new profile image URL
+                self.updateUserProfileImage(downloadURL.absoluteString)
             }
         }
     }
 
+    // Helper function to resize image
+    private func resizeImage(image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+        let aspectRatio = size.width / size.height
+
+        var newSize: CGSize
+        if size.width > size.height {
+            // Landscape
+            newSize = CGSize(width: min(maxDimension, size.width),
+                           height: min(maxDimension, size.width) / aspectRatio)
+        } else {
+            // Portrait or square
+            newSize = CGSize(width: min(maxDimension, size.height) * aspectRatio,
+                           height: min(maxDimension, size.height))
+        }
+
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+
     private func updateUserProfileImage(_ imageURL: String) {
-        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            DispatchQueue.main.async {
+                self.isUploadingImage = false
+                self.errorMessage = "User not authenticated"
+                self.showingError = true
+            }
+            return
+        }
+
+        #if DEBUG
+        print("💾 Updating Firestore with profile image URL...")
+        #endif
 
         // Update Firestore
         let db = Firestore.firestore()
         db.collection("users").document(currentUserId).updateData([
             "profileImageURL": imageURL
-        ]) { error in
+        ]) { [weak self] error in
+            guard let self = self else { return }
+
             DispatchQueue.main.async {
                 self.isUploadingImage = false
 
                 if let error = error {
-                    print("Error updating profile image: \(error)")
-                    self.errorMessage = "Failed to save profile picture: \(error.localizedDescription)"
+                    #if DEBUG
+                    print("❌ Error updating Firestore: \(error.localizedDescription)")
+                    #endif
+                    self.errorMessage = "Profile picture uploaded but failed to save. Please try again."
                     self.showingError = true
                 } else {
+                    #if DEBUG
+                    print("✅ Profile image URL saved to Firestore")
+                    #endif
+
                     // Update local user object
                     if var user = self.firebaseManager.currentUser {
                         user.profileImageURL = imageURL
@@ -584,34 +654,66 @@ struct UserProfileView: View {
     }
 
     private func removeProfileImage() {
-        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            errorMessage = "User not authenticated"
+            showingError = true
+            return
+        }
 
         isUploadingImage = true
+
+        #if DEBUG
+        print("🗑️ Removing profile image...")
+        #endif
 
         // Remove from Firestore
         let db = Firestore.firestore()
         db.collection("users").document(currentUserId).updateData([
             "profileImageURL": FieldValue.delete()
-        ]) { error in
+        ]) { [weak self] error in
+            guard let self = self else { return }
+
             DispatchQueue.main.async {
                 self.isUploadingImage = false
 
                 if let error = error {
-                    print("Error removing profile image: \(error)")
-                    self.errorMessage = "Failed to remove profile picture: \(error.localizedDescription)"
+                    #if DEBUG
+                    print("❌ Error removing profile image: \(error.localizedDescription)")
+                    #endif
+                    self.errorMessage = "Failed to remove profile picture. Please try again."
                     self.showingError = true
                 } else {
+                    #if DEBUG
+                    print("✅ Profile image removed successfully")
+                    #endif
+
                     // Update local state
                     if var user = self.firebaseManager.currentUser {
                         user.profileImageURL = nil
                         self.firebaseManager.currentUser = user
                     }
                     self.selectedProfileImage = nil
+
+                    // Show success message
+                    self.successMessage = "Profile picture removed"
+                    self.showingSuccess = true
                 }
             }
         }
 
-        // Optionally delete from Storage (keeping for potential re-use)
+        // Note: We keep the image in Storage for potential re-use
+        // If you want to delete from Storage, uncomment below:
+        /*
+        let storageRef = Storage.storage().reference()
+        let imageRef = storageRef.child("profile_images/\(currentUserId).jpg")
+        imageRef.delete { error in
+            if let error = error {
+                #if DEBUG
+                print("⚠️ Warning: Could not delete image from Storage: \(error.localizedDescription)")
+                #endif
+            }
+        }
+        */
     }
 }
 
