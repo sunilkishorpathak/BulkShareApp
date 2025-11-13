@@ -412,6 +412,10 @@ class FirebaseManager: ObservableObject {
     // MARK: - Invite Code Functions
 
     func findGroupByInviteCode(_ inviteCode: String) async throws -> Group {
+        #if DEBUG
+        print("🔍 Finding group with invite code: \(inviteCode)")
+        #endif
+
         let snapshot = try await firestore.collection("groups")
             .whereField("inviteCode", isEqualTo: inviteCode)
             .whereField("isActive", isEqualTo: true)
@@ -419,12 +423,24 @@ class FirebaseManager: ObservableObject {
             .getDocuments()
 
         guard let document = snapshot.documents.first else {
+            #if DEBUG
+            print("❌ No group found with invite code: \(inviteCode)")
+            #endif
             throw NSError(domain: "BulkMates", code: 404, userInfo: [NSLocalizedDescriptionKey: "Group not found"])
         }
 
         let data = document.data()
+
+        #if DEBUG
+        print("✅ Found group document ID: \(document.documentID)")
+        print("   Group name: \(data["name"] as? String ?? "Unknown")")
+        print("   Members: \(data["members"] as? [String] ?? [])")
+        #endif
+
+        // CRITICAL FIX: Always use document.documentID (actual Firestore document ID)
+        // NOT data["id"] which may be different from the document ID
         return Group(
-            id: data["id"] as? String ?? document.documentID,
+            id: document.documentID,
             name: data["name"] as? String ?? "",
             description: data["description"] as? String ?? "",
             members: data["members"] as? [String] ?? [],
@@ -438,12 +454,39 @@ class FirebaseManager: ObservableObject {
     }
 
     func joinGroupWithInviteCode(groupId: String, userId: String) async throws {
+        #if DEBUG
+        print("👥 Joining group...")
+        print("   Group ID: \(groupId)")
+        print("   User ID: \(userId)")
+        #endif
+
         let groupRef = firestore.collection("groups").document(groupId)
 
+        // First, verify the document exists
+        let document = try await groupRef.getDocument()
+        guard document.exists else {
+            #if DEBUG
+            print("❌ Group document does not exist with ID: \(groupId)")
+            #endif
+            throw NSError(
+                domain: "BulkMates",
+                code: 404,
+                userInfo: [NSLocalizedDescriptionKey: "Group not found. The group may have been deleted."]
+            )
+        }
+
+        #if DEBUG
+        print("✅ Group document exists, adding member...")
+        #endif
+
+        // Add user to members array
         try await groupRef.updateData([
             "members": FieldValue.arrayUnion([userId])
         ])
 
+        #if DEBUG
+        print("✅ Successfully added user to group!")
+        #endif
     }
 
     func leaveGroup(groupId: String, userId: String) async throws {
