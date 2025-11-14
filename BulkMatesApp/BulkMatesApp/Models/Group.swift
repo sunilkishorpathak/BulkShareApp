@@ -22,6 +22,7 @@ struct Group: Identifiable, Codable {
     var members: [String] // User IDs
     var invitedEmails: [String] // Invited email addresses that haven't joined yet
     var icon: String
+    var iconUrl: String? // Optional custom photo URL from Firebase Storage
     let createdAt: Date
     var adminId: String
     var isActive: Bool
@@ -34,6 +35,7 @@ struct Group: Identifiable, Codable {
          members: [String] = [],
          invitedEmails: [String] = [],
          icon: String = "👥",
+         iconUrl: String? = nil,
          createdAt: Date = Date(),
          adminId: String,
          isActive: Bool = true,
@@ -44,6 +46,7 @@ struct Group: Identifiable, Codable {
         self.members = members
         self.invitedEmails = invitedEmails
         self.icon = icon
+        self.iconUrl = iconUrl
         self.createdAt = createdAt
         self.adminId = adminId
         self.isActive = isActive

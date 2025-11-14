@@ -559,24 +559,80 @@ struct AllMembersView: View {
 struct AllTripsView: View {
     let groupId: String
     @Environment(\.dismiss) private var dismiss
-    
+    @State private var trips: [Trip] = []
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+
     var body: some View {
         NavigationView {
-            VStack {
-                Text("All Group Plans")
-                    .font(.title)
+            ZStack {
+                Color.bulkShareBackground.ignoresSafeArea()
 
-                Text("Coming Soon!")
-                    .foregroundColor(.bulkShareTextMedium)
+                if isLoading {
+                    ProgressView("Loading plans...")
+                } else if let error = errorMessage {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 50))
+                            .foregroundColor(.bulkShareTextMedium)
+                        Text("Error loading plans")
+                            .font(.headline)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextMedium)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                } else if trips.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "cart.badge.plus")
+                            .font(.system(size: 50))
+                            .foregroundColor(.bulkShareTextMedium)
+                        Text("No Plans Yet")
+                            .font(.headline)
+                        Text("Create your first group plan to get started")
+                            .font(.caption)
+                            .foregroundColor(.bulkShareTextMedium)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                } else {
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            ForEach(trips) { trip in
+                                NavigationLink(destination: TripDetailView(trip: trip)) {
+                                    EnhancedTripCard(trip: trip)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding()
+                    }
+                }
             }
-            .navigationTitle("Group Plans")
+            .navigationTitle("All Plans (\(trips.count))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
+                        .foregroundColor(.bulkSharePrimary)
                 }
             }
+            .task {
+                await loadAllTrips()
+            }
+        }
+    }
+
+    private func loadAllTrips() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            trips = try await FirebaseManager.shared.getGroupTrips(groupId: groupId)
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }
@@ -590,6 +646,8 @@ struct GroupSettingsView: View {
     @State private var isDeleting = false
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var showingComingSoonAlert = false
+    @State private var comingSoonFeature = ""
 
     private var isAdmin: Bool {
         guard let currentUser = FirebaseManager.shared.currentUser else { return false }
@@ -608,10 +666,18 @@ struct GroupSettingsView: View {
 
                         VStack(spacing: 12) {
                             SettingsRow(icon: "pencil", title: "Edit Group Info", action: {})
-                            SettingsRow(icon: "person.badge.plus", title: "Manage Members", action: {})
-                            SettingsRow(icon: "bell", title: "Notifications", action: {})
-                            SettingsRow(icon: "chart.bar", title: "Group Analytics", action: {})
-                            SettingsRow(icon: "shield", title: "Privacy Settings", action: {})
+                            SettingsRow(icon: "person.badge.plus", title: "Manage Members (Coming Soon)", isDisabled: true, action: {
+                                comingSoonFeature = "Member Management"
+                                showingComingSoonAlert = true
+                            })
+                            SettingsRow(icon: "bell", title: "Notifications (Coming Soon)", isDisabled: true, action: {
+                                comingSoonFeature = "Notification Settings"
+                                showingComingSoonAlert = true
+                            })
+                            SettingsRow(icon: "chart.bar", title: "Group Analytics (Coming Soon)", isDisabled: true, action: {
+                                comingSoonFeature = "Group Analytics"
+                                showingComingSoonAlert = true
+                            })
                         }
                         .padding()
                         .background(Color.white)
@@ -624,11 +690,11 @@ struct GroupSettingsView: View {
                                 .foregroundColor(.red)
 
                             if isAdmin {
-                                SettingsRow(icon: "trash.fill", title: "Delete Group", textColor: .red, action: {
+                                SettingsRow(icon: "trash.fill", title: "Delete Group", textColor: .red, showChevron: false, action: {
                                     showingDeleteConfirmation = true
                                 })
                             } else {
-                                SettingsRow(icon: "rectangle.portrait.and.arrow.right", title: "Leave Group", textColor: .red, action: {
+                                SettingsRow(icon: "rectangle.portrait.and.arrow.right", title: "Leave Group", textColor: .red, showChevron: false, action: {
                                     showingLeaveConfirmation = true
                                 })
                             }
@@ -670,6 +736,11 @@ struct GroupSettingsView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage ?? "An error occurred")
+            }
+            .alert("Coming Soon!", isPresented: $showingComingSoonAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("\(comingSoonFeature) will be available in a future update.")
             }
             .overlay {
                 if isDeleting {
@@ -730,29 +801,34 @@ struct SettingsRow: View {
     let icon: String
     let title: String
     var textColor: Color = .bulkShareTextDark
+    var showChevron: Bool = true
+    var isDisabled: Bool = false
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack {
                 Image(systemName: icon)
-                    .foregroundColor(textColor)
+                    .foregroundColor(isDisabled ? textColor.opacity(0.5) : textColor)
                     .frame(width: 24)
-                
+
                 Text(title)
-                    .foregroundColor(textColor)
-                
+                    .foregroundColor(isDisabled ? textColor.opacity(0.5) : textColor)
+
                 Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.bulkShareTextLight)
+
+                if showChevron {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextLight)
+                }
             }
             .padding()
             .background(Color.bulkShareBackground)
             .cornerRadius(8)
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(isDisabled)
     }
 }
 

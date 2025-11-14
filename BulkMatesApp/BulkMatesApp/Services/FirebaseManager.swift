@@ -326,7 +326,7 @@ class FirebaseManager: ObservableObject {
     // MARK: - Group Management
     
     func createGroup(_ group: Group) async throws -> String {
-        let groupData: [String: Any] = [
+        var groupData: [String: Any] = [
             "id": group.id,
             "name": group.name,
             "description": group.description,
@@ -338,6 +338,10 @@ class FirebaseManager: ObservableObject {
             "isActive": group.isActive,
             "inviteCode": group.inviteCode
         ]
+
+        if let iconUrl = group.iconUrl {
+            groupData["iconUrl"] = iconUrl
+        }
 
         let docRef = try await firestore.collection("groups").addDocument(data: groupData)
         return docRef.documentID
@@ -356,6 +360,7 @@ class FirebaseManager: ObservableObject {
                 members: data["members"] as? [String] ?? [],
                 invitedEmails: data["invitedEmails"] as? [String] ?? [],
                 icon: data["icon"] as? String ?? "👥",
+                iconUrl: data["iconUrl"] as? String,
                 createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                 adminId: data["adminId"] as? String ?? "",
                 isActive: data["isActive"] as? Bool ?? true,
@@ -371,7 +376,7 @@ class FirebaseManager: ObservableObject {
     }
     
     func updateGroup(_ group: Group) async throws {
-        let groupData: [String: Any] = [
+        var groupData: [String: Any] = [
             "name": group.name,
             "description": group.description,
             "members": group.members,
@@ -381,6 +386,10 @@ class FirebaseManager: ObservableObject {
             "isActive": group.isActive,
             "inviteCode": group.inviteCode
         ]
+
+        if let iconUrl = group.iconUrl {
+            groupData["iconUrl"] = iconUrl
+        }
 
         try await firestore.collection("groups").document(group.id).updateData(groupData)
     }
@@ -401,6 +410,7 @@ class FirebaseManager: ObservableObject {
                 members: data["members"] as? [String] ?? [],
                 invitedEmails: data["invitedEmails"] as? [String] ?? [],
                 icon: data["icon"] as? String ?? "👥",
+                iconUrl: data["iconUrl"] as? String,
                 createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                 adminId: data["adminId"] as? String ?? "",
                 isActive: data["isActive"] as? Bool ?? true,
@@ -446,6 +456,7 @@ class FirebaseManager: ObservableObject {
             members: data["members"] as? [String] ?? [],
             invitedEmails: data["invitedEmails"] as? [String] ?? [],
             icon: data["icon"] as? String ?? "👥",
+            iconUrl: data["iconUrl"] as? String,
             createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
             adminId: data["adminId"] as? String ?? "",
             isActive: data["isActive"] as? Bool ?? true,
@@ -652,6 +663,7 @@ class FirebaseManager: ObservableObject {
             members: data["members"] as? [String] ?? [],
             invitedEmails: data["invitedEmails"] as? [String] ?? [],
             icon: data["icon"] as? String ?? "👥",
+            iconUrl: data["iconUrl"] as? String,
             createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
             adminId: data["adminId"] as? String ?? "",
             isActive: data["isActive"] as? Bool ?? true
