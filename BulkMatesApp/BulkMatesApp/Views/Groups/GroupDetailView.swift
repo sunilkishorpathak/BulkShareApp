@@ -639,10 +639,11 @@ struct AllTripsView: View {
 
 // Placeholder for settings
 struct GroupSettingsView: View {
-    let group: Group
+    @State var group: Group
     @Environment(\.dismiss) private var dismiss
     @State private var showingDeleteConfirmation = false
     @State private var showingLeaveConfirmation = false
+    @State private var showingEditGroup = false
     @State private var isDeleting = false
     @State private var errorMessage: String?
     @State private var showingError = false
@@ -665,7 +666,9 @@ struct GroupSettingsView: View {
                             .fontWeight(.bold)
 
                         VStack(spacing: 12) {
-                            SettingsRow(icon: "pencil", title: "Edit Group Info", action: {})
+                            SettingsRow(icon: "pencil", title: "Edit Group Info", action: {
+                                showingEditGroup = true
+                            })
                             SettingsRow(icon: "person.badge.plus", title: "Manage Members (Coming Soon)", isDisabled: true, action: {
                                 comingSoonFeature = "Member Management"
                                 showingComingSoonAlert = true
@@ -741,6 +744,9 @@ struct GroupSettingsView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text("\(comingSoonFeature) will be available in a future update.")
+            }
+            .sheet(isPresented: $showingEditGroup) {
+                EditGroupView(group: $group)
             }
             .overlay {
                 if isDeleting {

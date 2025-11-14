@@ -72,6 +72,20 @@ service firebase.storage {
                    && request.resource.size < 5 * 1024 * 1024;
     }
 
+    // Group images: Custom group photos
+    match /group_images/{groupId}.jpg {
+      // Allow read if user is authenticated
+      allow read: if request.auth != null;
+
+      // Allow write if:
+      // - User is authenticated
+      // - File is an image
+      // - File size is under 5MB
+      allow write: if request.auth != null
+                   && request.resource.contentType.matches('image/(jpeg|png)')
+                   && request.resource.size < 5 * 1024 * 1024;
+    }
+
     // Deny all other access by default
     match /{allPaths=**} {
       allow read, write: if false;
@@ -114,6 +128,18 @@ service firebase.storage {
 
 ✅ **Write Access:**
 - Any authenticated user can upload activity images
+- Only JPEG or PNG images allowed
+- Maximum file size: 5MB
+
+### **Group Images (`group_images/{groupId}.jpg`)**
+
+✅ **Read Access:**
+- Any authenticated user can view group photos
+- Public access for displaying group icons
+
+✅ **Write Access:**
+- Any authenticated user can upload group photos
+- Useful for custom group icons instead of emojis
 - Only JPEG or PNG images allowed
 - Maximum file size: 5MB
 
@@ -199,6 +225,10 @@ gs://your-project-bucket/
 │   ├── userId1.jpg
 │   ├── userId2.jpg
 │   └── userId3.jpg
+├── group_images/
+│   ├── groupId1.jpg
+│   ├── groupId2.jpg
+│   └── groupId3.jpg
 ├── trip_images/
 │   ├── tripId1/
 │   │   ├── itemId1.jpg
@@ -219,6 +249,7 @@ gs://your-project-bucket/
 | Nov 8, 2025 | Initial rules created | Profile picture upload fix |
 | Nov 8, 2025 | Added file size limits | Prevent storage abuse |
 | Nov 8, 2025 | Added content type validation | Security improvement |
+| Nov 14, 2025 | Added group_images rules | Custom group icons feature |
 
 ---
 
