@@ -305,16 +305,6 @@ struct EditGroupView: View {
     }
 }
 
-// Custom text field style
-struct BulkShareTextFieldStyle: TextFieldStyle {
-    func _body(configuration: TextField<Self._Label>) -> some View {
-        configuration
-            .padding()
-            .background(Color.bulkShareBackground)
-            .cornerRadius(8)
-    }
-}
-
 // Image Picker
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
