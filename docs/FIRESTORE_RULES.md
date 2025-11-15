@@ -132,6 +132,54 @@ service cloud.firestore {
 
 ---
 
+## 📊 **REQUIRED FIRESTORE INDEXES**
+
+In addition to security rules, you need to create composite indexes for efficient queries.
+
+### **How to Create Indexes:**
+
+**IMPORTANT:** When you first run the app and tap the Notifications tab, Firestore will show an error with a direct link to create the required index.
+
+**Option 1: Use the Auto-Generated Link (Easiest)**
+1. Run your app and tap the **Notifications** tab
+2. Check Xcode console for the error message
+3. Click the URL in the error (starts with `https://console.firebase.google.com/...`)
+4. Firebase will open with the index pre-configured
+5. Click **"Create Index"**
+6. Wait 2-5 minutes for the index to build
+
+**Option 2: Create Manually**
+1. Go to Firebase Console → Firestore Database → Indexes
+2. Click **"Create Index"**
+3. Configure the index:
+   - **Collection:** `notifications`
+   - **Fields to index:**
+     - `recipientUserId` (Ascending)
+     - `createdAt` (Descending)
+   - **Query scope:** Collection
+4. Click **"Create"**
+5. Wait for the index to build
+
+### **Required Indexes:**
+
+```
+Collection: notifications
+Fields:
+  - recipientUserId (Ascending)
+  - createdAt (Descending)
+```
+
+This index is required for the query:
+```swift
+.whereField("recipientUserId", isEqualTo: userId)
+.order(by: "createdAt", descending: true)
+```
+
+**Why this is needed:**
+Firestore requires composite indexes for queries that combine filtering and sorting on different fields. This ensures fast query performance.
+
+---
+
 ## 🔍 **WHAT THESE RULES DO**
 
 ### **Users Collection (`users/{userId}`)**
@@ -253,14 +301,29 @@ After publishing the rules, test them:
 3. Make sure user is signed in (check Auth status)
 4. Wait 30-60 seconds after publishing rules (propagation delay)
 
+### **Error: "The query requires an index"**
+
+**Cause:** Missing composite index for notifications query
+
+**Fix:**
+1. Check Xcode console for the error message
+2. The error includes a direct link to create the index
+3. Click the URL (starts with `https://console.firebase.google.com/...`)
+4. Firebase will open with the index pre-configured
+5. Click **"Create Index"**
+6. Wait 2-5 minutes for the index to build
+7. Restart your app
+
+**Alternative:** See the **"REQUIRED FIRESTORE INDEXES"** section above for manual creation steps.
+
 ### **Error: "Listen for query failed"**
 
-**Cause:** Real-time listener doesn't have read permission
+**Cause:** Real-time listener doesn't have read permission or missing index
 
 **Fix:**
 - Ensure the query fields match the security rules
 - For notifications: verify `recipientUserId == request.auth.uid`
-- Check that indexes are created for compound queries
+- Check that indexes are created for compound queries (see above)
 
 ### **Notifications Not Appearing**
 
