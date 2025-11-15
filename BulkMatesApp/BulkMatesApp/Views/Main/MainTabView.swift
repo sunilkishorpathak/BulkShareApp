@@ -18,14 +18,7 @@ struct MainTabView: View {
                     Image(systemName: "house.fill")
                     Text("My Groups")
                 }
-            
-            // Browse Groups Tab
-            BrowseGroupsView()
-                .tabItem {
-                    Image(systemName: "magnifyingglass")
-                    Text("Browse")
-                }
-            
+
             // My Plans Tab
             MyTripsView()
                 .tabItem {
