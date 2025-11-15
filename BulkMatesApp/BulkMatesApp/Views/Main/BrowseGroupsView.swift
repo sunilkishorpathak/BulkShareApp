@@ -19,8 +19,6 @@ struct BrowseGroupsView: View {
     @State private var searchText = ""
     @State private var availableGroups: [Group] = []
     @State private var isLoading = true
-    @State private var showingJoinAlert = false
-    @State private var selectedGroup: Group?
     @State private var showingError = false
     @State private var errorMessage = ""
     
@@ -64,10 +62,7 @@ struct BrowseGroupsView: View {
                                     EmptySearchView(searchText: searchText)
                                 } else {
                                     ForEach(filteredGroups) { group in
-                                        BrowseGroupCard(group: group) {
-                                            selectedGroup = group
-                                            showingJoinAlert = true
-                                        }
+                                        BrowseGroupCard(group: group)
                                     }
                                 }
                             }
@@ -84,18 +79,6 @@ struct BrowseGroupsView: View {
             .toolbarColorScheme(.light, for: .navigationBar)
             .onAppear {
                 Task { await loadAllGroups() }
-            }
-            .alert("Join Group", isPresented: $showingJoinAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Request to Join") {
-                    if let group = selectedGroup {
-                        handleJoinRequest(group: group)
-                    }
-                }
-            } message: {
-                if let group = selectedGroup {
-                    Text("Would you like to request to join \"\(group.name)\"?")
-                }
             }
             .alert("Error", isPresented: $showingError) {
                 Button("OK", role: .cancel) { }
@@ -118,12 +101,6 @@ struct BrowseGroupsView: View {
             self.errorMessage = "Failed to load groups: \(error.localizedDescription)"
             self.showingError = true
         }
-    }
-    
-    private func handleJoinRequest(group: Group) {
-        // Simulate join request
-        // In real app, this would send a request to group admin
-        print("Requesting to join group: \(group.name)")
     }
 }
 
@@ -156,8 +133,7 @@ struct SearchBar: View {
 
 struct BrowseGroupCard: View {
     let group: Group
-    let onJoin: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header
@@ -194,23 +170,22 @@ struct BrowseGroupCard: View {
                     Label("Active group", systemImage: "checkmark.circle.fill")
                         .font(.caption)
                         .foregroundColor(.bulkShareSuccess)
-                    
+
                     Text("Created \(group.createdAt, style: .relative)")
                         .font(.caption)
                         .foregroundColor(.bulkShareTextLight)
                 }
-                
+
                 Spacer()
-                
-                Button(action: onJoin) {
-                    Text("Request to Join")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.bulkSharePrimary)
-                        .cornerRadius(8)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Label("Invite code required", systemImage: "key.fill")
+                        .font(.caption)
+                        .foregroundColor(.bulkSharePrimary)
+
+                    Text("Ask admin for code")
+                        .font(.caption2)
+                        .foregroundColor(.bulkShareTextLight)
                 }
             }
         }
