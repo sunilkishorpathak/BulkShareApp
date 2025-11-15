@@ -106,20 +106,23 @@ service cloud.firestore {
     // Transactions: Users can read/write their own transactions
     match /transactions/{transactionId} {
       // Users can read transactions they're involved in
+      // fromUserId = person who owes items, toUserId = person who provided items
       allow read: if isAuthenticated()
-                  && (request.auth.uid == resource.data.payerId
-                      || request.auth.uid == resource.data.recipientId);
+                  && (request.auth.uid == resource.data.fromUserId
+                      || request.auth.uid == resource.data.toUserId);
 
       // Authenticated users can create transactions
       allow create: if isAuthenticated();
 
-      // Users can update transactions they created
+      // Users can update transactions they're involved in
       allow update: if isAuthenticated()
-                    && request.auth.uid == resource.data.payerId;
+                    && (request.auth.uid == resource.data.fromUserId
+                        || request.auth.uid == resource.data.toUserId);
 
-      // Users can delete their own transactions
+      // Users can delete transactions they're involved in
       allow delete: if isAuthenticated()
-                    && request.auth.uid == resource.data.payerId;
+                    && (request.auth.uid == resource.data.fromUserId
+                        || request.auth.uid == resource.data.toUserId);
     }
 
     // Deny all other access by default
@@ -238,12 +241,14 @@ The `recipientUserId` field ensures notifications are private and only visible t
 ### **Transactions Collection (`transactions/{transactionId}`)**
 
 ✅ **Read Access:**
-- Users can read transactions where they're the payer or recipient
+- Users can read transactions where they're involved (fromUserId or toUserId)
+- `fromUserId`: Person who owes items
+- `toUserId`: Person who provided items
 - Privacy protection: users can't see unrelated transactions
 
 ✅ **Write Access:**
 - Create: Any authenticated user can create transactions
-- Update/Delete: Only the payer can modify
+- Update/Delete: Users involved in the transaction can modify it
 
 ---
 
@@ -389,10 +394,15 @@ firestore/
 └── transactions/
     └── {transactionId}
         ├── id: string
-        ├── payerId: string
-        ├── recipientId: string
-        ├── amount: number
-        └── createdAt: timestamp
+        ├── tripId: string
+        ├── fromUserId: string        ← Person who owes items
+        ├── toUserId: string          ← Person who provided items
+        ├── itemPoints: number        ← Number of items in transaction
+        ├── itemClaimIds: array<string>
+        ├── status: string
+        ├── createdAt: timestamp
+        ├── settledAt: timestamp?
+        └── notes: string?
 ```
 
 ---
