@@ -734,7 +734,7 @@ struct TripDetailHeader: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Group Context (if available)
+            // Group Context - Always show
             if let group = groupInfo {
                 NavigationLink(destination: GroupDetailView(group: group)) {
                     HStack(spacing: 6) {
@@ -754,6 +754,21 @@ struct TripDetailHeader: View {
                     .cornerRadius(8)
                 }
                 .buttonStyle(PlainButtonStyle())
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                // Show loading state while group info is loading
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                    Text("Loading group...")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.bulkShareTextMedium)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.bulkShareBackground)
+                .cornerRadius(8)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
@@ -1496,21 +1511,34 @@ struct QuantitySelectableItemCard: View {
 
 struct ParticipantsSection: View {
     let trip: Trip
-    
+    @State private var participants: [User] = []
+    @State private var isLoading = true
+
+    var memberCount: Int {
+        return trip.totalMemberCount
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Participants (\(trip.participantCount))")
+            Text("Participants (\(memberCount))")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.bulkShareTextDark)
-            
-            if trip.participantCount == 0 {
+
+            if isLoading {
+                HStack {
+                    Spacer()
+                    ProgressView("Loading participants...")
+                        .padding()
+                    Spacer()
+                }
+            } else if memberCount == 0 {
                 VStack(spacing: 8) {
                     Image(systemName: "person.badge.plus")
                         .font(.title2)
                         .foregroundColor(.bulkShareTextLight)
 
-                    Text("Be the first to join this plan!")
+                    Text("No participants yet")
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
                 }
@@ -1520,26 +1548,25 @@ struct ParticipantsSection: View {
                 .cornerRadius(12)
             } else {
                 VStack(spacing: 8) {
-                    ForEach(User.sampleUsers.prefix(trip.participantCount), id: \.id) { user in
+                    ForEach(participants, id: \.id) { user in
                         HStack {
-                            Text(user.initials)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .frame(width: 32, height: 32)
-                                .background(Color.bulkSharePrimary)
-                                .cornerRadius(16)
-                            
+                            ProfileImageView(user: user, size: 32)
+
                             Text(user.name)
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.bulkShareTextDark)
-                            
+
                             Spacer()
-                            
-                            Text("Joined")
-                                .font(.caption)
-                                .foregroundColor(.bulkShareSuccess)
+
+                            // Show role badge
+                            if trip.adminIds.contains(user.id) {
+                                Badge(text: "Organizer", color: .bulkSharePrimary)
+                            } else {
+                                Text("Member")
+                                    .font(.caption)
+                                    .foregroundColor(.bulkShareSuccess)
+                            }
                         }
                     }
                 }
@@ -1549,6 +1576,36 @@ struct ParticipantsSection: View {
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+        .task {
+            await loadParticipants()
+        }
+    }
+
+    private func loadParticipants() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            var users: [User] = []
+
+            // Load admin users
+            for adminId in trip.adminIds {
+                if let user = try? await FirebaseManager.shared.getUser(uid: adminId) {
+                    users.append(user)
+                }
+            }
+
+            // Load viewer users
+            for viewerId in trip.viewerIds {
+                if let user = try? await FirebaseManager.shared.getUser(uid: viewerId) {
+                    users.append(user)
+                }
+            }
+
+            DispatchQueue.main.async {
+                self.participants = users
+            }
+        }
     }
 }
 
