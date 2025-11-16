@@ -933,8 +933,13 @@ struct InviteMembersView: View {
     @State private var showingAlert = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
+    @State private var showCopiedConfirmation = false
     @Environment(\.dismiss) private var dismiss
-    
+
+    var shareMessage: String {
+        "Join my BulkMates group '\(group.name)'!\n\nInvite Code: \(group.inviteCode)\n\nDownload BulkMates and enter this code to join."
+    }
+
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
@@ -962,7 +967,79 @@ struct InviteMembersView: View {
                 .background(Color.white)
                 .cornerRadius(16)
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
-                
+
+                // Invite Code Card
+                VStack(spacing: 20) {
+                    Text("Share this code to invite members")
+                        .font(.subheadline)
+                        .foregroundColor(.bulkShareTextMedium)
+
+                    // Large Invite Code Display
+                    VStack(spacing: 12) {
+                        Text("INVITE CODE")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.bulkShareTextLight)
+                            .tracking(1)
+
+                        Text(group.inviteCode)
+                            .font(.system(size: 48, weight: .bold, design: .rounded))
+                            .foregroundColor(.bulkSharePrimary)
+                            .tracking(4)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 20)
+                            .background(Color.bulkSharePrimary.opacity(0.08))
+                            .cornerRadius(16)
+                    }
+
+                    // Copy Button
+                    Button(action: copyInviteCode) {
+                        HStack {
+                            Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
+                            Text(showCopiedConfirmation ? "Copied!" : "Copy Code")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.bulkSharePrimary.opacity(0.1))
+                        .foregroundColor(.bulkSharePrimary)
+                        .cornerRadius(12)
+                    }
+
+                    // Share Button
+                    ShareLink(item: shareMessage) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("Share Invite")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.bulkSharePrimary)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
+                }
+                .padding(24)
+                .background(Color.white)
+                .cornerRadius(20)
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+
+                // Divider
+                HStack {
+                    Rectangle()
+                        .frame(height: 1)
+                        .foregroundColor(.bulkShareTextLight.opacity(0.3))
+                    Text("OR")
+                        .font(.caption)
+                        .foregroundColor(.bulkShareTextLight)
+                        .padding(.horizontal, 8)
+                    Rectangle()
+                        .frame(height: 1)
+                        .foregroundColor(.bulkShareTextLight.opacity(0.3))
+                }
+                .padding(.horizontal)
+
                 // Add Members Form
                 VStack(alignment: .leading, spacing: 20) {
                     HStack {
@@ -1056,7 +1133,17 @@ struct InviteMembersView: View {
             }
         }
     }
-    
+
+    private func copyInviteCode() {
+        UIPasteboard.general.string = group.inviteCode
+        showCopiedConfirmation = true
+
+        // Reset confirmation after 2 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            showCopiedConfirmation = false
+        }
+    }
+
     private var isFormValid: Bool {
         let validEmails = memberEmails.filter { !$0.isEmpty && isValidEmail($0) }
         return !validEmails.isEmpty
