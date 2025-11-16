@@ -120,7 +120,7 @@ struct GroupHeaderView: View {
 
                 HStack(spacing: 20) {
                     Label("\(group.memberCount) members", systemImage: "person.3.fill")
-                    Label("Created \(group.createdAt, style: .relative)", systemName: "calendar")
+                    Label("Created \(group.createdAt, style: .relative)", systemImage: "calendar")
                 }
                 .font(.caption)
                 .foregroundColor(.bulkShareTextLight)
