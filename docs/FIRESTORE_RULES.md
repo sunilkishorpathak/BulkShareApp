@@ -37,6 +37,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Helper function: Check if user is admin of a group
+    function isGroupAdmin(groupId) {
+      return isAuthenticated()
+             && get(/databases/$(database)/documents/groups/$(groupId)).data.adminId == request.auth.uid;
+    }
+
     // Users collection: Users can read/write their own data
     match /users/{userId} {
       // Allow users to read their own profile and other users' profiles (for displaying in groups)
@@ -68,9 +74,10 @@ service cloud.firestore {
       // Allow create if user is authenticated
       allow create: if isAuthenticated();
 
-      // Allow update/delete if user is the trip creator
+      // Allow update/delete if user is the trip creator OR group admin
       allow update, delete: if isAuthenticated()
-                             && request.auth.uid == resource.data.createdBy;
+                             && (request.auth.uid == resource.data.createdBy
+                                 || isGroupAdmin(resource.data.groupId));
     }
 
     // Item claims: Members can claim items
@@ -217,7 +224,8 @@ Firestore requires composite indexes for queries that combine filtering and sort
 
 ✅ **Write Access:**
 - Create: Any authenticated user can create trips
-- Update/Delete: Only trip creator can modify
+- Update/Delete: Trip creator OR group admin can modify
+- **Group Admin Permission**: Allows admins to delete all trips when deleting a group
 
 ---
 
