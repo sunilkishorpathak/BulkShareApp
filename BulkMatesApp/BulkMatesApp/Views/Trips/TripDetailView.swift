@@ -36,6 +36,8 @@ struct TripDetailView: View {
     @State private var showingDeleteConfirmation = false
     @State private var showingEditPlan = false
     @State private var groupInfo: Group?
+    @State private var showingError = false
+    @State private var errorMessage = ""
     @Environment(\.dismiss) private var dismiss
 
     private var totalCost: Double {
@@ -252,6 +254,11 @@ struct TripDetailView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text("You've successfully confirmed your selection. You'll be notified when it's time for pickup.")
+        }
+        .alert("Error", isPresented: $showingError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
         }
         .onAppear {
             Task {
@@ -615,6 +622,8 @@ struct TripDetailView: View {
             } catch {
                 DispatchQueue.main.async {
                     isLoading = false
+                    errorMessage = "Failed to delete plan: \(error.localizedDescription)"
+                    showingError = true
                     print("Error deleting plan: \(error)")
                 }
             }
