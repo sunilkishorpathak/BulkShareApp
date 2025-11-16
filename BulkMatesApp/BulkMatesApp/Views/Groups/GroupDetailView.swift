@@ -9,30 +9,31 @@ import SwiftUI
 
 struct GroupDetailView: View {
     let group: Group
-    @State private var activeTrips: [Trip] = Trip.sampleTrips
+    @State private var activeTrips: [Trip] = []
+    @State private var isLoadingTrips = false
     @State private var showingSettings = false
     @State private var showingTripTypeSelection = false
     @State private var showingCreateTrip = false
     @State private var selectedTripType: TripType = .shopping
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 // Group Header
                 GroupHeaderView(group: group)
-                
+
                 // Members Section
                 GroupMembersSection(group: group)
-                
+
                 // Active Trips Section
-                ActiveTripsSection(trips: activeTrips, group: group)
-                
+                ActiveTripsSection(trips: activeTrips, group: group, isLoading: isLoadingTrips)
+
                 // Quick Actions Section
                 QuickActionsSection(group: group, onCreateTrip: {
                     showingTripTypeSelection = true
                 })
-                
+
                 Spacer(minLength: 100)
             }
             .padding()
@@ -65,6 +66,26 @@ struct GroupDetailView: View {
         .sheet(isPresented: $showingCreateTrip) {
             NavigationView {
                 CreateTripView(group: group, tripType: selectedTripType)
+            }
+        }
+        .task {
+            await loadGroupTrips()
+        }
+    }
+
+    private func loadGroupTrips() async {
+        isLoadingTrips = true
+        defer { isLoadingTrips = false }
+
+        do {
+            let trips = try await FirebaseManager.shared.getGroupTrips(groupId: group.id)
+            DispatchQueue.main.async {
+                self.activeTrips = trips
+            }
+        } catch {
+            print("Error loading group trips: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.activeTrips = []
             }
         }
     }
@@ -251,6 +272,7 @@ struct GroupMembersSection: View {
 struct ActiveTripsSection: View {
     let trips: [Trip]
     let group: Group
+    let isLoading: Bool
     @State private var showingTripTypeSelection = false
     @State private var showingCreateTrip = false
     @State private var showingAllTrips = false
@@ -276,8 +298,15 @@ struct ActiveTripsSection: View {
                 .background(Color.bulkSharePrimary)
                 .cornerRadius(8)
             }
-            
-            if trips.isEmpty {
+
+            if isLoading {
+                HStack {
+                    Spacer()
+                    ProgressView("Loading plans...")
+                        .padding()
+                    Spacer()
+                }
+            } else if trips.isEmpty {
                 EmptyTripsCard()
             } else {
                 VStack(spacing: 12) {
@@ -287,7 +316,7 @@ struct ActiveTripsSection: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
-                    
+
                     if trips.count > 3 {
                         Button("View All Plans (\(trips.count))") {
                             showingAllTrips = true
