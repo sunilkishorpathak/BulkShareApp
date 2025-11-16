@@ -19,7 +19,6 @@ struct CreateGroupView: View {
     @State private var groupName: String = ""
     @State private var groupDescription: String = ""
     @State private var selectedIcon: String = "👥"
-    @State private var memberEmails: [String] = [""]
     @State private var isLoading: Bool = false
     @State private var showingAlert: Bool = false
     @State private var alertTitle: String = ""
@@ -123,105 +122,29 @@ struct CreateGroupView: View {
                         .background(Color.white)
                         .cornerRadius(16)
                         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
-                        
-                        // Invite Members Section
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("Invite Members")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.bulkShareTextDark)
 
-                            // Share Link Method (Primary)
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Image(systemName: "link.circle.fill")
-                                        .foregroundColor(.bulkSharePrimary)
-                                        .font(.title3)
-
-                                    Text("Share Invite Link")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.bulkShareTextDark)
-                                }
-
-                                Text("After creating the group, you'll get a shareable invite link and code")
-                                    .font(.caption)
-                                    .foregroundColor(.bulkShareTextMedium)
-                                    .multilineTextAlignment(.leading)
-                            }
-                            .padding()
-                            .background(Color.bulkSharePrimary.opacity(0.05))
-                            .cornerRadius(12)
-
-                            // Divider
+                        // Info Card
+                        VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Rectangle()
-                                    .fill(Color.bulkShareTextLight.opacity(0.3))
-                                    .frame(height: 1)
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundColor(.bulkShareInfo)
+                                    .font(.title3)
 
-                                Text("OR")
-                                    .font(.caption)
-                                    .foregroundColor(.bulkShareTextLight)
-                                    .padding(.horizontal, 8)
-
-                                Rectangle()
-                                    .fill(Color.bulkShareTextLight.opacity(0.3))
-                                    .frame(height: 1)
+                                Text("Invite Members")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.bulkShareTextDark)
                             }
 
-                            // Email Invite Method (Secondary)
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Image(systemName: "envelope.circle.fill")
-                                        .foregroundColor(.bulkShareTextMedium)
-                                        .font(.title3)
-
-                                    Text("Invite by Email (Optional)")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.bulkShareTextDark)
-
-                                    Spacer()
-
-                                    Button(action: addMemberField) {
-                                        Image(systemName: "plus.circle.fill")
-                                            .foregroundColor(.bulkSharePrimary)
-                                            .font(.title3)
-                                    }
-                                }
-
-                                VStack(spacing: 12) {
-                                    ForEach(memberEmails.indices, id: \.self) { index in
-                                        HStack {
-                                            TextField("member@email.com", text: $memberEmails[index])
-                                                .textFieldStyle(BulkShareTextFieldStyle())
-                                                .keyboardType(.emailAddress)
-                                                .autocapitalization(.none)
-                                                .autocorrectionDisabled()
-
-                                            if memberEmails.count > 1 {
-                                                Button(action: {
-                                                    removeMemberField(at: index)
-                                                }) {
-                                                    Image(systemName: "minus.circle.fill")
-                                                        .foregroundColor(.red)
-                                                        .font(.title3)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Text("Email invitations will be sent to these addresses")
-                                    .font(.caption)
-                                    .foregroundColor(.bulkShareTextLight)
-                            }
+                            Text("After creating the group, you'll receive a shareable invite code and link to invite members.")
+                                .font(.caption)
+                                .foregroundColor(.bulkShareTextMedium)
+                                .multilineTextAlignment(.leading)
                         }
                         .padding()
-                        .background(Color.white)
-                        .cornerRadius(16)
-                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
-                        
+                        .background(Color.bulkShareInfo.opacity(0.05))
+                        .cornerRadius(12)
+
                         // Create Button
                         Button(action: handleCreateGroup) {
                             HStack {
@@ -280,17 +203,7 @@ struct CreateGroupView: View {
     private var isFormValid: Bool {
         return !groupName.isEmpty && selectedIcon != ""
     }
-    
-    private func addMemberField() {
-        memberEmails.append("")
-    }
-    
-    private func removeMemberField(at index: Int) {
-        if memberEmails.count > 1 {
-            memberEmails.remove(at: index)
-        }
-    }
-    
+
     private func handleCreateGroup() {
         guard isFormValid else {
             showAlert(title: "Invalid Form", message: "Please enter a group name")
@@ -303,55 +216,22 @@ struct CreateGroupView: View {
         }
         
         isLoading = true
-        
+
         Task {
-            // Filter out empty emails
-            let validEmails = memberEmails.filter { !$0.isEmpty && isValidEmail($0) }
-            
             // Create the group object
             let group = Group(
                 name: groupName,
                 description: groupDescription,
                 members: [currentUser.id], // Add current user as first member
-                invitedEmails: validEmails, // Add invited emails
+                invitedEmails: [], // No email invites
                 icon: selectedIcon,
                 adminId: currentUser.id
             )
-            
+
             do {
                 // Save group to Firestore
-                let groupId = try await FirebaseManager.shared.createGroup(group)
-                
-                // Send invitation emails if there are valid emails
-                var emailResult: Result<Void, EmailError>?
-                if !validEmails.isEmpty {
-                    emailResult = await EmailService.shared.sendGroupInvitations(
-                        groupName: groupName,
-                        inviterName: currentUser.name,
-                        memberEmails: validEmails,
-                        groupId: groupId
-                    )
-                }
-                
-                // Send in-app notifications to existing users
-                print("🚀 Sending notifications to \(validEmails.count) emails: \(validEmails)")
-                for email in validEmails {
-                    do {
-                        print("📱 Creating notification for email: \(email)")
-                        try await NotificationManager.shared.createGroupInvitationNotification(
-                            groupId: groupId,
-                            groupName: groupName,
-                            inviterUserId: currentUser.id,
-                            inviterName: currentUser.name,
-                            recipientEmail: email
-                        )
-                        print("✅ Successfully created notification for \(email)")
-                    } catch {
-                        print("❌ Failed to create notification for \(email): \(error)")
-                        // Continue with other notifications even if one fails
-                    }
-                }
-                
+                _ = try await FirebaseManager.shared.createGroup(group)
+
                 DispatchQueue.main.async {
                     self.isLoading = false
 
@@ -362,7 +242,7 @@ struct CreateGroupView: View {
                     // Show invite sheet to share the code
                     self.showingInviteSheet = true
                 }
-                
+
             } catch {
                 DispatchQueue.main.async {
                     self.isLoading = false
@@ -379,12 +259,6 @@ struct CreateGroupView: View {
         alertTitle = title
         alertMessage = message
         showingAlert = true
-    }
-    
-    private func isValidEmail(_ email: String) -> Bool {
-        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
-        let emailPredicate = NSPredicate(format:"SELF MATCHES %@", emailRegex)
-        return emailPredicate.evaluate(with: email)
     }
 }
 

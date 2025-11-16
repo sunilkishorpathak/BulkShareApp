@@ -928,11 +928,6 @@ struct InvitedEmailRow: View {
 
 struct InviteMembersView: View {
     let group: Group
-    @State private var memberEmails: [String] = [""]
-    @State private var isLoading = false
-    @State private var showingAlert = false
-    @State private var alertTitle = ""
-    @State private var alertMessage = ""
     @State private var showCopiedConfirmation = false
     @Environment(\.dismiss) private var dismiss
 
@@ -1025,90 +1020,6 @@ struct InviteMembersView: View {
                 .cornerRadius(20)
                 .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
 
-                // Divider
-                HStack {
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(.bulkShareTextLight.opacity(0.3))
-                    Text("OR")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextLight)
-                        .padding(.horizontal, 8)
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(.bulkShareTextLight.opacity(0.3))
-                }
-                .padding(.horizontal)
-
-                // Add Members Form
-                VStack(alignment: .leading, spacing: 20) {
-                    HStack {
-                        Text("Email Addresses")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.bulkShareTextDark)
-                        
-                        Spacer()
-                        
-                        Button(action: addMemberField) {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.bulkSharePrimary)
-                                .font(.title3)
-                        }
-                    }
-                    
-                    VStack(spacing: 12) {
-                        ForEach(memberEmails.indices, id: \.self) { index in
-                            HStack {
-                                TextField("member@email.com", text: $memberEmails[index])
-                                    .textFieldStyle(BulkShareTextFieldStyle())
-                                    .keyboardType(.emailAddress)
-                                    .autocapitalization(.none)
-                                    .autocorrectionDisabled()
-                                
-                                if memberEmails.count > 1 {
-                                    Button(action: {
-                                        removeMemberField(at: index)
-                                    }) {
-                                        Image(systemName: "minus.circle.fill")
-                                            .foregroundColor(.red)
-                                            .font(.title3)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    Text("Invitations will be sent to these email addresses")
-                        .font(.caption)
-                        .foregroundColor(.bulkShareTextLight)
-                }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(16)
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
-                
-                // Send Invitations Button
-                Button(action: handleSendInvitations) {
-                    HStack {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(0.8)
-                        } else {
-                            Text("Send Invitations")
-                                .fontWeight(.semibold)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(isFormValid ? Color.bulkSharePrimary : Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(16)
-                }
-                .disabled(isLoading || !isFormValid)
-                .padding(.horizontal)
-                
                 Spacer()
             }
             .padding()
@@ -1122,15 +1033,6 @@ struct InviteMembersView: View {
                         .foregroundColor(.bulkSharePrimary)
                 }
             }
-            .alert(alertTitle, isPresented: $showingAlert) {
-                Button("OK", role: .cancel) {
-                    if alertTitle == "Invitations Sent!" {
-                        dismiss()
-                    }
-                }
-            } message: {
-                Text(alertMessage)
-            }
         }
     }
 
@@ -1142,114 +1044,6 @@ struct InviteMembersView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             showCopiedConfirmation = false
         }
-    }
-
-    private var isFormValid: Bool {
-        let validEmails = memberEmails.filter { !$0.isEmpty && isValidEmail($0) }
-        return !validEmails.isEmpty
-    }
-    
-    private func addMemberField() {
-        memberEmails.append("")
-    }
-    
-    private func removeMemberField(at index: Int) {
-        if memberEmails.count > 1 {
-            memberEmails.remove(at: index)
-        }
-    }
-    
-    private func handleSendInvitations() {
-        let validEmails = memberEmails.filter { !$0.isEmpty && isValidEmail($0) }
-        
-        guard !validEmails.isEmpty else {
-            showAlert(title: "Invalid Emails", message: "Please enter at least one valid email address")
-            return
-        }
-        
-        isLoading = true
-        
-        Task {
-            do {
-                // Update group with new invited emails
-                let updatedGroup = Group(
-                    id: group.id,
-                    name: group.name,
-                    description: group.description,
-                    members: group.members,
-                    invitedEmails: group.invitedEmails + validEmails,
-                    icon: group.icon,
-                    createdAt: group.createdAt,
-                    adminId: group.adminId,
-                    isActive: group.isActive
-                )
-                
-                // Update group in Firestore
-                try await FirebaseManager.shared.updateGroup(updatedGroup)
-                
-                // Create notifications for invited users
-                let currentUser = FirebaseManager.shared.currentUser
-                let inviterName = currentUser?.name ?? "Someone"
-                let inviterUserId = currentUser?.id ?? ""
-                
-                var notificationResults: [Result<Void, Error>] = []
-                
-                for email in validEmails {
-                    do {
-                        try await NotificationManager.shared.createGroupInvitationNotification(
-                            groupId: group.id,
-                            groupName: group.name,
-                            inviterUserId: inviterUserId,
-                            inviterName: inviterName,
-                            recipientEmail: email
-                        )
-                        notificationResults.append(.success(()))
-                    } catch {
-                        notificationResults.append(.failure(error))
-                    }
-                }
-                
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    
-                    let successCount = notificationResults.filter { if case .success = $0 { return true }; return false }.count
-                    let failureCount = validEmails.count - successCount
-                    
-                    if failureCount == 0 {
-                        self.showAlert(
-                            title: "Invitations Sent!",
-                            message: "Group updated and notifications sent to \(successCount) members. They'll see the invitation when they open the app."
-                        )
-                    } else {
-                        self.showAlert(
-                            title: "Partially Successful",
-                            message: "Group updated and \(successCount) notifications sent. \(failureCount) users don't have accounts yet."
-                        )
-                    }
-                }
-                
-            } catch {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.showAlert(
-                        title: "Error",
-                        message: "Failed to update group: \(error.localizedDescription)"
-                    )
-                }
-            }
-        }
-    }
-    
-    private func showAlert(title: String, message: String) {
-        alertTitle = title
-        alertMessage = message
-        showingAlert = true
-    }
-    
-    private func isValidEmail(_ email: String) -> Bool {
-        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
-        let emailPredicate = NSPredicate(format:"SELF MATCHES %@", emailRegex)
-        return emailPredicate.evaluate(with: email)
     }
 }
 
