@@ -35,6 +35,7 @@ struct TripDetailView: View {
     @State private var showingPlanMenu = false
     @State private var showingDeleteConfirmation = false
     @State private var showingEditPlan = false
+    @State private var showingAddItem = false
     @State private var groupInfo: Group?
     @State private var showingError = false
     @State private var errorMessage = ""
@@ -217,6 +218,9 @@ struct TripDetailView: View {
             }
         }
         .confirmationDialog("Plan Options", isPresented: $showingPlanMenu, titleVisibility: .visible) {
+            Button("Add Item") {
+                showingAddItem = true
+            }
             Button("Edit Plan Details") {
                 showingEditPlan = true
             }
@@ -272,6 +276,11 @@ struct TripDetailView: View {
                 NavigationView {
                     EditPlanDetailsView(trip: $trip, group: group)
                 }
+            }
+        }
+        .sheet(isPresented: $showingAddItem) {
+            AddTripItemView(tripType: trip.tripType) { item in
+                handleAddItem(item)
             }
         }
         .sheet(isPresented: $showingAddItemRequest) {
@@ -535,11 +544,37 @@ struct TripDetailView: View {
         }
     }
     
+    private func handleAddItem(_ item: TripItem) {
+        Task {
+            do {
+                // Add item to trip
+                trip.items.append(item)
+
+                // Update trip in Firestore
+                try await FirebaseManager.shared.updateTrip(trip)
+
+                // Refresh trip data
+                await loadTripData()
+
+                DispatchQueue.main.async {
+                    showingAddItem = false
+                }
+
+            } catch {
+                DispatchQueue.main.async {
+                    errorMessage = "Failed to add item: \(error.localizedDescription)"
+                    showingError = true
+                }
+                print("Error adding item: \(error)")
+            }
+        }
+    }
+
     private func handleItemRequestSubmission(_ request: ItemRequest) {
         Task {
             do {
                 try await FirebaseManager.shared.createItemRequest(request)
-                
+
                 // Send notification to trip organizer
                 if let currentUser = FirebaseManager.shared.currentUser {
                     try await NotificationManager.shared.createItemRequestNotification(

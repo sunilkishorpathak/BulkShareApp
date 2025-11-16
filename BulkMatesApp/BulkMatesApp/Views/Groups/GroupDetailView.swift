@@ -21,7 +21,7 @@ struct GroupDetailView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Group Header
-                GroupHeaderView(group: group)
+                GroupHeaderView(group: group, activePlansCount: activeTrips.count)
 
                 // Members Section
                 GroupMembersSection(group: group)
@@ -93,7 +93,8 @@ struct GroupDetailView: View {
 
 struct GroupHeaderView: View {
     let group: Group
-    
+    let activePlansCount: Int
+
     var body: some View {
         VStack(spacing: 16) {
             // Group Icon
@@ -102,31 +103,31 @@ struct GroupHeaderView: View {
                 .frame(width: 100, height: 100)
                 .background(Color.bulkSharePrimary.opacity(0.1))
                 .cornerRadius(20)
-            
+
             // Group Info
             VStack(spacing: 8) {
                 Text(group.name)
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(.bulkShareTextDark)
-                
+
                 if !group.description.isEmpty {
                     Text(group.description)
                         .font(.subheadline)
                         .foregroundColor(.bulkShareTextMedium)
                         .multilineTextAlignment(.center)
                 }
-                
+
                 HStack(spacing: 20) {
                     Label("\(group.memberCount) members", systemImage: "person.3.fill")
-                    Label("Created \(group.createdAt, style: .relative)", systemImage: "calendar")
+                    Label("Created \(group.createdAt, style: .relative)", systemName: "calendar")
                 }
                 .font(.caption)
                 .foregroundColor(.bulkShareTextLight)
             }
-            
+
             // Group Stats
-            GroupStatCard(title: "Active Plans", value: "2", icon: "cart.fill", color: .bulkSharePrimary)
+            GroupStatCard(title: "Active Plans", value: "\(activePlansCount)", icon: "cart.fill", color: .bulkSharePrimary)
                 .frame(maxWidth: 200)
         }
         .padding()
@@ -406,15 +407,8 @@ struct EnhancedTripCard: View {
                 }
                 
                 Spacer()
-                
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("$\(trip.totalEstimatedCost, specifier: "%.2f")")
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.bulkSharePrimary)
-                    
-                    Badge(text: trip.status.displayName, color: Color(hex: trip.status.color))
-                }
+
+                Badge(text: trip.status.displayName, color: Color(hex: trip.status.color))
             }
             
             // Items Preview
